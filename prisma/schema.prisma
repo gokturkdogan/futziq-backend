@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DataSource {
+  TRANSFERMARKT
+  MANUAL
+  IMPORT
+  @@map("DataSource")
+}
+
+enum Confederation {
+  UEFA
+  CONMEBOL
+  CONCACAF
+  CAF
+  AFC
+  OFC
+  @@map("Confederation")
+}
+
+enum Continent {
+  EUROPE
+  SOUTH_AMERICA
+  NORTH_AMERICA
+  AFRICA
+  ASIA
+  OCEANIA
+  @@map("Continent")
+}
+
+// ─── Existing football reference data (read-only from game engine perspective) ───
+
+model Player {
+  id                            String    @id
+  transfermarktId               Int       @unique @map("transfermarkt_id")
+  firstName                     String?   @map("first_name")
+  lastName                      String?   @map("last_name")
+  displayName                   String?   @map("display_name")
+  currentClubId                 String?   @map("current_club_id")
+  nationalityCountryId          String?   @map("nationality_country_id")
+  nationalTeamId                String?   @map("national_team_id")
+  heightCm                      Int?      @map("height_cm")
+  currentMarketValueEur         BigInt?   @map("current_market_value_eur")
+  maxHistoricalMarketValueEur   BigInt?   @map("max_historical_market_value_eur")
+  totalGoals                    Int?      @map("total_goals")
+  totalAssists                  Int?      @map("total_assists")
+  championsLeagueTitles         Int?      @map("champions_league_titles")
+  totalYellowCards              Int?      @map("total_yellow_cards")
+  totalRedCards                 Int?      @map("total_red_cards")
+  maxGoalsInSingleSeason        Int?      @map("max_goals_in_single_season")
+  ballonDorCount                Int?      @map("ballon_dor_count")
+  isActive                      Boolean?      @map("is_active")
+  dataSource                    DataSource?   @map("data_source")
+  createdAt                     DateTime  @map("created_at")
+  updatedAt                     DateTime  @map("updated_at")
+  externalPlayerId              String?   @map("external_player_id")
+  primaryPosition               String?   @map("primary_position")
+  subPosition                   String?   @map("sub_position")
+  birthDate                     DateTime? @map("birth_date")
+  birthPlace                    String?   @map("birth_place")
+  clubAppearances               Int?      @map("club_appearances")
+  clubGoals                     Int?      @map("club_goals")
+  clubAssists                   Int?      @map("club_assists")
+  clubYellowCards               Int?      @map("club_yellow_cards")
+  clubRedCards                  Int?      @map("club_red_cards")
+  clubMinutes                   Int?      @map("club_minutes")
+  internationalAppearances      Int?      @map("international_appearances")
+  internationalGoals            Int?      @map("international_goals")
+  internationalAssists          Int?      @map("international_assists")
+  internationalYellowCards      Int?      @map("international_yellow_cards")
+  internationalRedCards         Int?      @map("international_red_cards")
+  internationalMinutes          Int?      @map("international_minutes")
+  worldCupAppearances           Int?      @map("world_cup_appearances")
+  worldCupGoals                 Int?      @map("world_cup_goals")
+  worldCupAssists               Int?      @map("world_cup_assists")
+  worldCupYellowCards           Int?      @map("world_cup_yellow_cards")
+  worldCupRedCards              Int?      @map("world_cup_red_cards")
+  worldCupMinutes               Int?      @map("world_cup_minutes")
+  totalAppearances              Int?      @map("total_appearances")
+  totalMinutes                  Int?      @map("total_minutes")
+  championsLeagueAppearances    Int?      @map("champions_league_appearances")
+  championsLeagueGoals            Int?      @map("champions_league_goals")
+  championsLeagueAssists          Int?      @map("champions_league_assists")
+  championsLeagueYellowCards      Int?      @map("champions_league_yellow_cards")
+  championsLeagueRedCards         Int?      @map("champions_league_red_cards")
+  championsLeagueMinutes          Int?      @map("champions_league_minutes")
+
+  currentClub        Club?         @relation(fields: [currentClubId], references: [id])
+  nationalityCountry Country?      @relation(fields: [nationalityCountryId], references: [id])
+  nationalTeam       NationalTeam? @relation(fields: [nationalTeamId], references: [id])
+  playerClubs        PlayerClub[]
+
+  @@index([isActive])
+  @@index([totalGoals])
+  @@map("players")
+}
+
+model Club {
+  id                      String   @id
+  name                    String
+  transfermarktClubId     Int      @map("transfermarkt_club_id")
+  countryId               String?  @map("country_id")
+  currentCompetitionId    String?  @map("current_competition_id")
+  logoUrl                 String?  @map("logo_url")
+  createdAt               DateTime @map("created_at")
+  updatedAt               DateTime @map("updated_at")
+
+  country    Country?     @relation(fields: [countryId], references: [id])
+  players    Player[]
+  playerClubs PlayerClub[]
+
+  @@map("clubs")
+}
+
+model Country {
+  id                   String   @id
+  transfermarktCountryId Int?   @map("transfermarkt_country_id")
+  name                 String
+  confederation        Confederation?
+  createdAt            DateTime @map("created_at")
+  updatedAt            DateTime @map("updated_at")
+  slug                 String
+  continent            Continent?
+  flagUrl              String?  @map("flag_url")
+
+  players       Player[]
+  clubs         Club[]
+  nationalTeams NationalTeam[]
+
+  @@map("countries")
+}
+
+model NationalTeam {
+  id                String   @id
+  transfermarktTeamId Int?     @map("transfermarkt_team_id")
+  name              String
+  countryId         String?  @map("country_id")
+  createdAt         DateTime @map("created_at")
+  updatedAt         DateTime @map("updated_at")
+  slug              String
+  confederation     Confederation?
+  logoUrl           String?  @map("logo_url")
+  isActive          Boolean  @map("is_active")
+
+  country Country? @relation(fields: [countryId], references: [id])
+  players Player[]
+
+  @@map("national_teams")
+}
+
+model Competition {
+  id                        String   @id
+  name                      String
+  slug                      String
+  transfermarktCompetitionId String  @map("transfermarkt_competition_id")
+  countryId                 String?  @map("country_id")
+  tier                      Int
+  createdAt                 DateTime @map("created_at")
+  updatedAt                 DateTime @map("updated_at")
+
+  @@map("competitions")
+}
+
+model PlayerClub {
+  id        String   @id
+  playerId  String   @map("player_id")
+  clubId    String   @map("club_id")
+  isCurrent Boolean  @map("is_current")
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+
+  player Player @relation(fields: [playerId], references: [id])
+  club   Club   @relation(fields: [clubId], references: [id])
+
+  @@map("player_clubs")
+}
+
+// ─── Game engine tables ───
+
+enum CatalogStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum GameSessionStatus {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum GameParticipantStatus {
+  ACTIVE
+  COMPLETED
+  DISCONNECTED
+}
+
+enum PerformanceRating {
+  PERFECT
+  EXCELLENT
+  GOOD
+  AVERAGE
+  POOR
+}
+
+model GameFamily {
+  id          String         @id @default(uuid())
+  code        String         @unique
+  title       String
+  description String?
+  sortOrder   Int            @default(0) @map("sort_order")
+  status      CatalogStatus  @default(ACTIVE)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  games Game[]
+
+  @@map("game_families")
+}
+
+model Game {
+  id            String        @id @default(uuid())
+  familyId      String        @map("family_id")
+  code          String
+  title         String
+  description   String?
+  sortOrder     Int           @default(0) @map("sort_order")
+  status        CatalogStatus @default(ACTIVE)
+  requiresScope Boolean       @default(true) @map("requires_scope")
+  config        Json?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  family     GameFamily      @relation(fields: [familyId], references: [id])
+  scopeRules GameScopeRule[]
+  sessions   GameSession[]
+
+  @@unique([familyId, code])
+  @@index([familyId])
+  @@map("games")
+}
+
+model GameScope {
+  id          String        @id @default(uuid())
+  code        String        @unique
+  title       String
+  description String?
+  sortOrder   Int           @default(0) @map("sort_order")
+  status      CatalogStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  scopeRules GameScopeRule[]
+  sessions   GameSession[]
+
+  @@map("game_scopes")
+}
+
+model GameScopeRule {
+  id        String        @id @default(uuid())
+  gameId    String        @map("game_id")
+  scopeId   String        @map("scope_id")
+  sortOrder Int           @default(0) @map("sort_order")
+  status    CatalogStatus @default(ACTIVE)
+  config    Json
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  game     Game          @relation(fields: [gameId], references: [id])
+  scope    GameScope     @relation(fields: [scopeId], references: [id])
+  sessions GameSession[]
+
+  @@unique([gameId, scopeId])
+  @@index([gameId])
+  @@index([scopeId])
+  @@map("game_scope_rules")
+}
+
+model GameSession {
+  id                 String            @id @default(uuid())
+  gameId             String            @map("game_id")
+  scopeId            String?           @map("scope_id")
+  gameScopeRuleId    String?           @map("game_scope_rule_id")
+  definitionSnapshot Json              @map("definition_snapshot")
+  status             GameSessionStatus @default(CREATED)
+  seed               String
+  targetValue        Int?              @map("target_value")
+  stateVersion       Int               @default(0) @map("state_version")
+  startedAt          DateTime?         @map("started_at")
+  completedAt        DateTime?         @map("completed_at")
+  expiresAt          DateTime?         @map("expires_at")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  game          Game           @relation(fields: [gameId], references: [id])
+  scope         GameScope?     @relation(fields: [scopeId], references: [id])
+  gameScopeRule GameScopeRule? @relation(fields: [gameScopeRuleId], references: [id])
+  participants  GameParticipant[]
+  actions       GameAction[]
+  events        GameEvent[]
+  selections    GameSelection[]
+  results       GameResult[]
+
+  @@index([gameId])
+  @@index([scopeId])
+  @@map("game_sessions")
+}
+
+model GameParticipant {
+  id                     String                @id @default(uuid())
+  gameSessionId          String                @map("game_session_id")
+  externalParticipantId  String                @map("external_participant_id")
+  turnOrder              Int                   @map("turn_order")
+  status                 GameParticipantStatus @default(ACTIVE)
+  aggregateValue         Int                   @default(0) @map("aggregate_value")
+  selectionCount         Int                   @default(0) @map("selection_count")
+  createdAt              DateTime              @default(now()) @map("created_at")
+
+  gameSession GameSession    @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  actions     GameAction[]
+  events      GameEvent[]
+  selections  GameSelection[]
+  results     GameResult[]
+
+  @@unique([gameSessionId, externalParticipantId])
+  @@map("game_participants")
+}
+
+model GameAction {
+  id              String    @id @default(uuid())
+  actionId        String    @map("action_id")
+  gameSessionId   String    @map("game_session_id")
+  participantId   String    @map("participant_id")
+  actionType      String    @map("action_type")
+  expectedVersion Int       @map("expected_version")
+  payload         Json
+  processedAt     DateTime? @map("processed_at")
+  resultVersion   Int?      @map("result_version")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  gameSession GameSession     @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, actionId])
+  @@map("game_actions")
+}
+
+model GameEvent {
+  id            String   @id @default(uuid())
+  gameSessionId String   @map("game_session_id")
+  sequence      Int
+  eventType     String   @map("event_type")
+  participantId String?  @map("participant_id")
+  payload       Json
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  gameSession GameSession      @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+
+  @@unique([gameSessionId, sequence])
+  @@map("game_events")
+}
+
+model GameSelection {
+  id                  String   @id @default(uuid())
+  gameSessionId       String   @map("game_session_id")
+  participantId       String   @map("participant_id")
+  playerId            String   @map("player_id")
+  selectionOrder      Int      @map("selection_order")
+  metricCode          String   @map("metric_code")
+  metricValueSnapshot Int      @map("metric_value_snapshot")
+  playerSnapshot      Json     @map("player_snapshot")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  gameSession GameSession     @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, participantId, playerId])
+  @@unique([gameSessionId, participantId, selectionOrder])
+  @@map("game_selections")
+}
+
+model GameResult {
+  id                 String            @id @default(uuid())
+  gameSessionId      String            @map("game_session_id")
+  participantId      String            @map("participant_id")
+  targetValue        Int               @map("target_value")
+  aggregateValue     Int               @map("aggregate_value")
+  absoluteDifference Int               @map("absolute_difference")
+  exactHit           Boolean           @map("exact_hit")
+  performanceRating  PerformanceRating @map("performance_rating")
+  resultPayload      Json              @map("result_payload")
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  gameSession GameSession     @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, participantId])
+  @@map("game_results")
+}
