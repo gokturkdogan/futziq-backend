@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 
-import { createApp } from '../dist/create-app';
+import { createApp } from './create-app';
 
 type ExpressHandler = (req: IncomingMessage, res: ServerResponse) => void;
 
