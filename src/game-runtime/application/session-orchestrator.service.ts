@@ -4,7 +4,7 @@ import {
   GameEventType,
   RevealPolicy,
 } from '../../game-engine/contracts/game-types';
-import { parseGameDefinitionConfig } from '../../game-engine/core/config-parser';
+import { parseGameDefinitionConfig, isDraftConfig } from '../../game-engine/core/config-parser';
 import {
   ProcessActionInput,
   ProcessActionResult,
@@ -18,17 +18,26 @@ import {
 import { DomainException, ErrorCode } from '../../common/errors/domain.exception';
 import { PrismaService } from '../../football-data/infrastructure/prisma.service';
 import {
+  encodeDefinitionSnapshot,
   getExpectedTurnParticipant,
   isSessionFullyComplete,
   parseSessionRuntime,
   PlayerMode,
 } from '../domain/session-runtime';
+import {
+  advanceDraftRound,
+  canAdvanceRound,
+  getDraftRoundScopeParams,
+  recordPickInRound,
+} from '../domain/draft-round';
+import { DraftRoundScopeService } from './draft-round-scope.service';
 
 @Injectable()
 export class SessionOrchestrator {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pluginRegistry: GameFamilyPluginRegistry,
+    private readonly draftRoundScopeService: DraftRoundScopeService,
     @Inject(GAME_SESSION_REPOSITORY)
     private readonly sessionRepository: GameSessionRepository,
   ) {}
@@ -110,6 +119,7 @@ export class SessionOrchestrator {
 
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
     const runtime = parseSessionRuntime(session.definitionSnapshot);
+    const sessionScopeParams = getDraftRoundScopeParams(runtime.draftRound);
     const expectedParticipant = getExpectedTurnParticipant(
       session.participants,
       session.selections.length,
@@ -167,6 +177,7 @@ export class SessionOrchestrator {
       definition,
       selectedPlayerIds,
       existingSelections,
+      sessionScopeParams,
       isPlayerSelectedInSession: (playerId) =>
         this.sessionRepository.isPlayerSelectedInSession(input.sessionId, playerId),
     });
@@ -186,6 +197,37 @@ export class SessionOrchestrator {
     );
     const now = new Date();
     const slotCode = 'slotCode' in input.payload ? input.payload.slotCode : null;
+    let nextDraftRound = runtime.draftRound ? recordPickInRound(runtime.draftRound) : undefined;
+    let nextDefinitionSnapshot = session.definitionSnapshot;
+    let roundAdvanced = false;
+
+    if (nextDraftRound && canAdvanceRound(nextDraftRound)) {
+      const nextEntity = await this.draftRoundScopeService.pickNextRoundEntity({
+        scopeType: nextDraftRound.scopeType,
+        seed: session.seed,
+        roundNumber: nextDraftRound.currentRound + 1,
+        metricCode: definition.metric,
+        usedEntityIds: nextDraftRound.usedEntityIds,
+      });
+      nextDraftRound = advanceDraftRound(nextDraftRound, nextEntity);
+      roundAdvanced = true;
+
+      if (isDraftConfig(definition)) {
+        const updatedConfig = this.draftRoundScopeService.applyScopeParamsToConfig(
+          definition,
+          nextDraftRound,
+        );
+        nextDefinitionSnapshot = encodeDefinitionSnapshot(updatedConfig, {
+          playerMode: runtime.playerMode,
+          draftRound: nextDraftRound,
+        }) as object;
+      }
+    } else if (nextDraftRound) {
+      nextDefinitionSnapshot = encodeDefinitionSnapshot(definition, {
+        playerMode: runtime.playerMode,
+        draftRound: nextDraftRound,
+      }) as object;
+    }
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -197,6 +239,7 @@ export class SessionOrchestrator {
           },
           data: {
             stateVersion: newStateVersion,
+            definitionSnapshot: nextDefinitionSnapshot as object,
             ...(sessionComplete ? { status: 'COMPLETED', completedAt: now } : {}),
           },
         });
@@ -264,9 +307,26 @@ export class SessionOrchestrator {
               slotCode,
               metricValue,
               aggregateValue: newAggregate,
+              roundNumber: runtime.draftRound?.currentRound ?? null,
             },
           },
         });
+
+        if (roundAdvanced && nextDraftRound) {
+          nextSequence += 1;
+          await tx.gameEvent.create({
+            data: {
+              gameSessionId: input.sessionId,
+              sequence: nextSequence,
+              eventType: GameEventType.ROUND_STARTED,
+              payload: {
+                roundNumber: nextDraftRound.currentRound,
+                scopeType: nextDraftRound.scopeType,
+                entity: nextDraftRound.currentEntity,
+              } as object,
+            },
+          });
+        }
 
         if (sessionComplete && session.targetValue != null) {
           for (const sessionParticipant of session.participants) {

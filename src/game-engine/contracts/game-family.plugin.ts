@@ -20,6 +20,7 @@ export interface SelectionValidationContext {
     playerSnapshot: Record<string, unknown>;
   }>;
   isPlayerSelectedInSession: (playerId: string) => Promise<boolean>;
+  sessionScopeParams?: Record<string, unknown>;
 }
 
 export interface CompletionContext {

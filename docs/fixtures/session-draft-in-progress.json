@@ -1,0 +1,81 @@
+{
+  "id": "session-draft-example",
+  "status": "IN_PROGRESS",
+  "stateVersion": 1,
+  "targetValue": null,
+  "seed": "seed-uuid",
+  "scopeCode": "DRAFT_CLUB",
+  "family": "DRAFT",
+  "playerMode": "SINGLE",
+  "currentTurnParticipantId": "participant-uuid",
+  "currentRound": {
+    "roundNumber": 2,
+    "totalRounds": 6,
+    "scopeType": "CLUB",
+    "picksInRound": 0,
+    "picksRequired": 1,
+    "entity": {
+      "type": "CLUB",
+      "id": "club-uuid",
+      "name": "FC Barcelona",
+      "logoUrl": "/images/clubs/barcelona.png"
+    }
+  },
+  "definitionSnapshot": {
+    "family": "DRAFT",
+    "metric": "HEIGHT_CM",
+    "scope": "RANDOM_CLUB",
+    "roundScopeType": "CLUB",
+    "selectionCount": 6,
+    "aggregation": "SUM",
+    "comparison": "HIGHEST",
+    "objective": "MAX",
+    "revealPolicy": "IMMEDIATE",
+    "duplicatePolicy": "REJECT_SAME_PARTICIPANT",
+    "activeStatusFilter": "ANY"
+  },
+  "startedAt": "2026-07-22T12:00:00.000Z",
+  "completedAt": null,
+  "expiresAt": "2026-07-23T12:00:00.000Z",
+  "participants": [
+    {
+      "id": "participant-uuid",
+      "externalParticipantId": "550e8400-e29b-41d4-a716-446655440000",
+      "turnOrder": 0,
+      "status": "ACTIVE",
+      "aggregateValue": 372,
+      "selectionCount": 1,
+      "lineup": [
+        {
+          "slotCode": "GK",
+          "displayName": "Kaleci",
+          "line": "GK",
+          "occupied": true,
+          "playerId": "player-1",
+          "metricValue": 192,
+          "playerSnapshot": { "displayName": "Thibaut Courtois" }
+        },
+        {
+          "slotCode": "DEF1",
+          "displayName": "Defans 1",
+          "line": "DEF",
+          "occupied": false,
+          "playerId": null,
+          "metricValue": null,
+          "playerSnapshot": null
+        }
+      ]
+    }
+  ],
+  "selections": [
+    {
+      "participantId": "participant-uuid",
+      "playerId": "player-1",
+      "selectionOrder": 1,
+      "slotCode": "GK",
+      "metricValue": 192,
+      "playerSnapshot": { "displayName": "Thibaut Courtois" },
+      "revealed": true
+    }
+  ]
+}

@@ -29,6 +29,87 @@ export class PrismaFootballDataRepository implements FootballDataRepository {
     return player ? this.toRecord(player) : null;
   }
 
+  async isPlayerInClub(playerId: string, clubId: string): Promise<boolean> {
+    const count = await this.prisma.player.count({
+      where: {
+        id: playerId,
+        OR: [
+          { currentClubId: clubId },
+          { playerClubs: { some: { clubId } } },
+        ],
+      },
+    });
+    return count > 0;
+  }
+
+  async isPlayerFromCountry(playerId: string, countryId: string): Promise<boolean> {
+    const count = await this.prisma.player.count({
+      where: { id: playerId, nationalityCountryId: countryId },
+    });
+    return count > 0;
+  }
+
+  async findEligibleClubs(
+    metricColumn: string,
+    minPlayers: number,
+    excludeIds: string[] = [],
+  ): Promise<Array<{ id: string; name: string; logoUrl: string | null }>> {
+    const excludeClause =
+      excludeIds.length > 0
+        ? `AND c.id NOT IN (${excludeIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')})`
+        : '';
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{ id: string; name: string; logo_url: string | null }>
+    >(
+      `SELECT c.id, c.name, c.logo_url
+       FROM clubs c
+       INNER JOIN player_clubs pc ON pc.club_id = c.id
+       INNER JOIN players p ON p.id = pc.player_id
+       WHERE p.${metricColumn} IS NOT NULL
+       ${excludeClause}
+       GROUP BY c.id, c.name, c.logo_url
+       HAVING COUNT(DISTINCT p.id) >= ${minPlayers}
+       ORDER BY c.name ASC`,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      logoUrl: row.logo_url,
+    }));
+  }
+
+  async findEligibleCountries(
+    metricColumn: string,
+    minPlayers: number,
+    excludeIds: string[] = [],
+  ): Promise<Array<{ id: string; name: string; logoUrl: string | null }>> {
+    const excludeClause =
+      excludeIds.length > 0
+        ? `AND co.id NOT IN (${excludeIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(',')})`
+        : '';
+
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{ id: string; name: string; flag_url: string | null }>
+    >(
+      `SELECT co.id, co.name, co.flag_url
+       FROM countries co
+       INNER JOIN players p ON p.nationality_country_id = co.id
+       WHERE p.${metricColumn} IS NOT NULL
+       ${excludeClause}
+       GROUP BY co.id, co.name, co.flag_url
+       HAVING COUNT(DISTINCT p.id) >= ${minPlayers}
+       ORDER BY co.name ASC`,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      logoUrl: row.flag_url,
+    }));
+  }
+
   async search(criteria: PlayerSearchCriteria): Promise<{
     items: PlayerRecord[];
     total: number;
@@ -118,6 +199,15 @@ export class PrismaFootballDataRepository implements FootballDataRepository {
         criteria.metricNotNull ? { [metricField]: { not: null } } : {},
         criteria.metricMinValue != null ? { [metricField]: { gte: criteria.metricMinValue } } : {},
         criteria.excludePlayerIds.length ? { id: { notIn: criteria.excludePlayerIds } } : {},
+        criteria.clubId
+          ? {
+              OR: [
+                { currentClubId: criteria.clubId },
+                { playerClubs: { some: { clubId: criteria.clubId } } },
+              ],
+            }
+          : {},
+        criteria.countryId ? { nationalityCountryId: criteria.countryId } : {},
         criteria.allowedRawPositions?.length
           ? {
               OR: [

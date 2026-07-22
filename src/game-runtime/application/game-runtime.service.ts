@@ -4,7 +4,8 @@ import { GAME_SESSION_REPOSITORY, GameSessionRepository } from '../domain/game-s
 import { DomainException, ErrorCode } from '../../common/errors/domain.exception';
 import { ScopeRegistry } from '../../game-engine/registries/scope.registry';
 import { parseGameDefinitionConfig } from '../../game-engine/core/config-parser';
-import { PlayerMode } from '../domain/session-runtime';
+import { parseSessionRuntime, PlayerMode } from '../domain/session-runtime';
+import { mergeScopeParams } from '../domain/draft-round';
 import { SessionOrchestrator } from './session-orchestrator.service';
 import { ClientViewMapper } from '../../client-contract/client-view.mapper';
 
@@ -71,6 +72,8 @@ export class GameRuntimeService {
     }
 
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const runtime = parseSessionRuntime(session.definitionSnapshot);
+    const scopeParams = mergeScopeParams(definition.scopeParams, runtime.draftRound);
     let participant = session.participants.find(
       (p) => p.externalParticipantId === externalParticipantId,
     );
@@ -92,9 +95,13 @@ export class GameRuntimeService {
 
     const scopeResolver = this.scopeRegistry.get(definition.scope);
     const result = await scopeResolver.searchEligiblePlayers(
-      { code: definition.scope, params: definition.scopeParams },
+      { code: definition.scope, params: scopeParams },
       { query, page, limit, excludePlayerIds, slotCode },
-      { sessionId, definition, scopeParams: slotCode ? { slotCode } : undefined },
+      {
+        sessionId,
+        definition,
+        scopeParams: slotCode ? { ...scopeParams, slotCode } : scopeParams,
+      },
     );
 
     return {

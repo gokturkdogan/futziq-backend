@@ -48,8 +48,8 @@ describe('Target Hunt E2E', () => {
       .expect(200);
 
     expect(draftRes.body.games.length).toBeGreaterThan(0);
-    expect(draftRes.body.games[0].requiresScope).toBe(false);
-    expect(draftRes.body.games[0].scopes).toBeNull();
+    expect(draftRes.body.games[0].requiresScope).toBe(true);
+    expect(draftRes.body.games[0].scopes.length).toBeGreaterThan(0);
   });
 
   it('returns localized catalog titles via Accept-Language', async () => {
@@ -169,6 +169,7 @@ describe('Target Hunt E2E', () => {
       .send({
         familyCode: 'DRAFT',
         gameCode: 'TALLEST_XI',
+        scopeCode: 'DRAFT_CLUB',
       })
       .expect(201);
 

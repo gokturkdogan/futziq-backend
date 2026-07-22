@@ -21,6 +21,8 @@ export interface GameSessionState {
   aggregateValue: number;
   playerMode: string;
   currentTurnParticipantId: string | null;
+  currentRound?: import('../../game-runtime/domain/draft-round').DraftRoundContextResponse | null;
+  lineup?: import('../../game-runtime/domain/draft-lineup').DraftLineupSlotView[] | null;
   selections: Array<{
     playerId: string;
     selectionOrder: number;

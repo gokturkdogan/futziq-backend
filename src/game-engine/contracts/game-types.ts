@@ -50,6 +50,7 @@ export enum ScopeCode {
   ACTIVE_PLAYERS = 'ACTIVE_PLAYERS',
   RETIRED_PLAYERS = 'RETIRED_PLAYERS',
   RANDOM_CLUB = 'RANDOM_CLUB',
+  RANDOM_COUNTRY = 'RANDOM_COUNTRY',
   CLUB_ALL_TIME = 'CLUB_ALL_TIME',
   NATIONAL_TEAM_ALL_TIME = 'NATIONAL_TEAM_ALL_TIME',
   LEAGUE = 'LEAGUE',
@@ -91,6 +92,7 @@ export enum GameActionType {
 
 export enum GameEventType {
   SESSION_STARTED = 'SESSION_STARTED',
+  ROUND_STARTED = 'ROUND_STARTED',
   PLAYER_SELECTED = 'PLAYER_SELECTED',
   GAME_COMPLETED = 'GAME_COMPLETED',
 }
@@ -184,6 +186,8 @@ export interface GameDefinitionConfig {
   performanceRating?: PerformanceRatingThresholds;
   lineupTemplate?: LineupTemplate;
   positionEligibilityPolicy?: PositionEligibilityPolicy;
+  /** Draft round mode: each round assigns a random club or country scope. */
+  roundScopeType?: 'CLUB' | 'COUNTRY';
 }
 
 export const DEFAULT_PERFORMANCE_RATING: PerformanceRatingThresholds = {

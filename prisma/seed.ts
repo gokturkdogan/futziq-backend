@@ -9,12 +9,14 @@ import {
 } from './catalog-media';
 import {
   DRAFT_GAMES,
+  DRAFT_GAME_SCOPES,
   GAME_FAMILIES,
   GAME_SCOPES,
   TARGET_HUNT_GAMES,
   TargetHuntGameCode,
   PlayableGameScopeCode,
-  buildDraftGameConfig,
+  DraftGameScopeCode,
+  buildDraftScopeRuleConfig,
   buildTargetHuntScopeRuleConfig,
   getDefaultLocaleText,
 } from './catalog-seed';
@@ -91,6 +93,40 @@ async function upsertFamilies(media: CatalogMediaFile) {
 
     await upsertTranslations('family', record.id, family.translations);
     console.log(`Family ready: ${family.code}`);
+  }
+}
+
+async function upsertDraftScopes(media: CatalogMediaFile) {
+  for (const scope of DRAFT_GAME_SCOPES) {
+    const defaultText = getDefaultLocaleText(scope.translations);
+    const existing = await prisma.gameScope.findUnique({
+      where: { code: scope.code },
+      select: { id: true, imageUrl: true },
+    });
+    const exported = media.scopes[scope.code];
+    const imageUrl = resolveMediaUrl(scope.imageUrl, exported?.imageUrl, existing?.imageUrl);
+
+    const record = await prisma.gameScope.upsert({
+      where: { code: scope.code },
+      update: {
+        title: defaultText.title,
+        description: defaultText.description,
+        imageUrl,
+        sortOrder: scope.sortOrder,
+        status: 'ACTIVE',
+      },
+      create: {
+        code: scope.code,
+        title: defaultText.title,
+        description: defaultText.description,
+        imageUrl,
+        sortOrder: scope.sortOrder,
+        status: 'ACTIVE',
+      },
+    });
+
+    await upsertTranslations('scope', record.id, scope.translations);
+    console.log(`Draft scope ready: ${scope.code}`);
   }
 }
 
@@ -270,8 +306,8 @@ async function seedDraftGames(media: CatalogMediaFile) {
         bannerImageUrl,
         sortOrder: game.code === 'TALLEST_XI' ? 1 : 2,
         status: 'ACTIVE',
-        requiresScope: false,
-        config: buildDraftGameConfig(game.objective) as object,
+        requiresScope: true,
+        config: null,
       },
       create: {
         familyId: family.id,
@@ -282,12 +318,46 @@ async function seedDraftGames(media: CatalogMediaFile) {
         bannerImageUrl,
         sortOrder: game.code === 'TALLEST_XI' ? 1 : 2,
         status: 'ACTIVE',
-        requiresScope: false,
-        config: buildDraftGameConfig(game.objective) as object,
+        requiresScope: true,
+        config: null,
       },
     });
 
     await upsertTranslations('game', record.id, game.translations);
+
+    for (const scope of DRAFT_GAME_SCOPES) {
+      const scopeRecord = await prisma.gameScope.findUnique({ where: { code: scope.code } });
+      if (!scopeRecord) {
+        throw new Error(`Draft scope missing: ${scope.code}`);
+      }
+
+      const ruleConfig = buildDraftScopeRuleConfig(
+        scope.code as DraftGameScopeCode,
+        game.objective,
+      );
+
+      await prisma.gameScopeRule.upsert({
+        where: {
+          gameId_scopeId: {
+            gameId: record.id,
+            scopeId: scopeRecord.id,
+          },
+        },
+        update: {
+          sortOrder: scope.sortOrder,
+          status: 'ACTIVE',
+          config: ruleConfig as object,
+        },
+        create: {
+          gameId: record.id,
+          scopeId: scopeRecord.id,
+          sortOrder: scope.sortOrder,
+          status: 'ACTIVE',
+          config: ruleConfig as object,
+        },
+      });
+    }
+
     console.log(`Game ready: DRAFT/${game.code}`);
   }
 }
@@ -296,6 +366,7 @@ async function main() {
   const media = loadCatalogMediaFile();
   await upsertFamilies(media);
   await upsertScopes(media);
+  await upsertDraftScopes(media);
   await seedTargetHuntGames(media);
   await seedDraftGames(media);
 }

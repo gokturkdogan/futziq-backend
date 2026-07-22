@@ -3,6 +3,13 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      { "include": "../docs/**/*.md", "outDir": "dist/docs" },
+      { "include": "../docs/_manifest.json", "outDir": "dist/docs" },
+      { "include": "../docs/figma-screens.json", "outDir": "dist/docs" },
+      { "include": "../docs/fixtures/**/*.json", "outDir": "dist/docs/fixtures" }
+    ],
+    "watchAssets": true
   }
 }

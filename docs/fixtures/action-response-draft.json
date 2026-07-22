@@ -1,0 +1,66 @@
+{
+  "state": {
+    "sessionId": "session-draft-example",
+    "status": "IN_PROGRESS",
+    "stateVersion": 2,
+    "targetValue": null,
+    "selectionCount": 2,
+    "aggregateValue": 372,
+    "playerMode": "SINGLE",
+    "currentTurnParticipantId": "participant-uuid",
+    "currentRound": {
+      "roundNumber": 2,
+      "totalRounds": 6,
+      "scopeType": "CLUB",
+      "picksInRound": 1,
+      "picksRequired": 1,
+      "entity": {
+        "type": "CLUB",
+        "id": "club-uuid",
+        "name": "FC Barcelona",
+        "logoUrl": "/images/clubs/barcelona.png"
+      }
+    },
+    "lineup": [
+      {
+        "slotCode": "GK",
+        "displayName": "Kaleci",
+        "line": "GK",
+        "occupied": true,
+        "playerId": "player-1",
+        "metricValue": 192,
+        "playerSnapshot": { "displayName": "Thibaut Courtois" }
+      },
+      {
+        "slotCode": "DEF1",
+        "displayName": "Defans 1",
+        "line": "DEF",
+        "occupied": true,
+        "playerId": "player-2",
+        "metricValue": 180,
+        "playerSnapshot": { "displayName": "Ronald Araújo" }
+      }
+    ],
+    "selections": [
+      {
+        "playerId": "player-1",
+        "selectionOrder": 1,
+        "slotCode": "GK",
+        "metricValue": 192,
+        "playerSnapshot": { "displayName": "Thibaut Courtois" },
+        "revealed": true
+      },
+      {
+        "playerId": "player-2",
+        "selectionOrder": 2,
+        "slotCode": "DEF1",
+        "metricValue": 180,
+        "playerSnapshot": { "displayName": "Ronald Araújo" },
+        "revealed": true
+      }
+    ]
+  },
+  "eventType": "PLAYER_SELECTED",
+  "completed": false,
+  "idempotentReplay": false
+}

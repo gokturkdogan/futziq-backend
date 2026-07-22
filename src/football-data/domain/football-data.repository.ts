@@ -49,11 +49,31 @@ export interface PlayerSearchCriteria {
   metricMinValue?: number;
   activeStatusFilter?: string;
   allowedRawPositions?: string[];
+  clubId?: string;
+  countryId?: string;
+}
+
+export interface ScopeEntityRecord {
+  id: string;
+  name: string;
+  logoUrl: string | null;
 }
 
 export interface FootballDataRepository {
   findById(id: string): Promise<PlayerRecord | null>;
   search(criteria: PlayerSearchCriteria): Promise<{ items: PlayerRecord[]; total: number }>;
+  isPlayerInClub(playerId: string, clubId: string): Promise<boolean>;
+  isPlayerFromCountry(playerId: string, countryId: string): Promise<boolean>;
+  findEligibleClubs(
+    metricColumn: string,
+    minPlayers: number,
+    excludeIds?: string[],
+  ): Promise<ScopeEntityRecord[]>;
+  findEligibleCountries(
+    metricColumn: string,
+    minPlayers: number,
+    excludeIds?: string[],
+  ): Promise<ScopeEntityRecord[]>;
   getMetricDistribution(
     metricCode: string,
     activeStatusFilter?: string,

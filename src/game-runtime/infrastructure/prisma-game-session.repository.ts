@@ -33,6 +33,9 @@ import {
   parseSessionRuntime,
   PlayerMode,
 } from '../domain/session-runtime';
+import { DraftRoundScopeService } from '../application/draft-round-scope.service';
+import { isDraftConfig } from '../../game-engine/core/config-parser';
+import { hasRoundScope, toDraftRoundContextResponse } from '../domain/draft-round';
 import { buildDraftLineup, type DraftLineupSlotView } from '../domain/draft-lineup';
 
 const GAME_SESSION_VIEW_INCLUDE = {
@@ -51,6 +54,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     @Inject(FOOTBALL_DATA_REPOSITORY)
     private readonly footballData: FootballDataRepository,
     private readonly localizedConfig: LocalizedConfigService,
+    private readonly draftRoundScopeService: DraftRoundScopeService,
   ) {}
 
   async createSession(input: CreateSessionInput): Promise<GameSessionView> {
@@ -102,10 +106,23 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     const sessionId = uuidv4();
     const participantExternalIds = buildParticipantExternalIds(input.externalParticipantId, playerMode);
 
+    let draftRound;
+    let sessionConfig = config;
+    if (isDraftConfig(config) && hasRoundScope(config)) {
+      draftRound = await this.draftRoundScopeService.initializeRoundState({
+        scopeType: config.roundScopeType!,
+        selectionCount: config.selectionCount,
+        playerMode,
+        seed,
+        metricCode: config.metric,
+      });
+      sessionConfig = this.draftRoundScopeService.applyScopeParamsToConfig(config, draftRound);
+    }
+
     const targetValue =
       input.targetValue != null
         ? input.targetValue
-        : (await handler.initializeSession(sessionId, config, seed)).targetValue;
+        : (await handler.initializeSession(sessionId, sessionConfig, seed)).targetValue;
     const expiresAt = new Date(Date.now() + input.sessionExpiryHours * 60 * 60 * 1000);
 
     const session = await this.prisma.gameSession.create({
@@ -114,7 +131,10 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         gameId: resolved.gameId,
         scopeId: resolved.scopeId,
         gameScopeRuleId: resolved.gameScopeRuleId,
-        definitionSnapshot: encodeDefinitionSnapshot(config, { playerMode }) as object,
+        definitionSnapshot: encodeDefinitionSnapshot(sessionConfig, {
+          playerMode,
+          draftRound,
+        }) as object,
         status: 'IN_PROGRESS',
         seed,
         targetValue,
@@ -139,7 +159,9 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
               gameCode: resolved.gameCode,
               scopeCode: resolved.scopeCode,
               playerMode,
-            },
+              roundNumber: draftRound?.currentRound ?? null,
+              roundEntity: draftRound?.currentEntity ?? null,
+            } as object,
           },
         },
       },
@@ -426,6 +448,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         runtime.playerMode,
         definition.selectionCount,
       ),
+      currentRound: runtime.draftRound ? toDraftRoundContextResponse(runtime.draftRound) : null,
       lineup: participant
         ? this.buildParticipantLineup(
             definition,
@@ -497,6 +520,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         runtime.playerMode,
         definition.selectionCount,
       ),
+      currentRound: runtime.draftRound ? toDraftRoundContextResponse(runtime.draftRound) : null,
       startedAt: session.startedAt?.toISOString() ?? null,
       completedAt: session.completedAt?.toISOString() ?? null,
       expiresAt: session.expiresAt?.toISOString() ?? null,

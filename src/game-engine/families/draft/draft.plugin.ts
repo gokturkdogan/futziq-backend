@@ -95,6 +95,7 @@ export class DraftFamilyPlugin implements GameFamilyPlugin {
       playerId,
       slotCode,
       definition,
+      sessionScopeParams: ctx.sessionScopeParams,
     });
 
     if (

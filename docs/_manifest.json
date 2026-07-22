@@ -1,0 +1,53 @@
+{
+  "sections": [
+    {
+      "title": "Başlangıç",
+      "items": [
+        { "slug": "overview", "title": "Genel Bakış", "description": "Hızlı başlangıç, oyun aileleri ve doküman haritası" },
+        { "slug": "common-setup", "title": "Ortak Kurulum", "description": "Base URL, header'lar, participant ID ve CORS" },
+        { "slug": "common-errors", "title": "Hata Kodları", "description": "HTTP status eşlemesi ve UI davranışı" },
+        { "slug": "i18n", "title": "Dil Desteği (i18n)", "description": "Accept-Language, i18n bundle ve enum çevirileri" }
+      ]
+    },
+    {
+      "title": "API Referansı",
+      "items": [
+        { "slug": "api-meta", "title": "Meta Endpoint'leri", "description": "locales, i18n-bundle, enums" },
+        { "slug": "api-catalog", "title": "Katalog", "description": "GET /game-families — oyun ve scope listesi" },
+        { "slug": "api-session", "title": "Session", "description": "Oturum oluşturma, currentRound, durum sorgulama" },
+        { "slug": "api-player-search", "title": "Oyuncu Arama", "description": "GET /players — slotCode ve tur scope filtresi" },
+        { "slug": "api-actions", "title": "Aksiyonlar", "description": "POST /actions — SELECT_PLAYER ve idempotency" },
+        { "slug": "api-results", "title": "Sonuçlar", "description": "TARGET_HUNT ve DRAFT result union" },
+        { "slug": "api-events", "title": "Olaylar (Events)", "description": "Audit log — Flutter v1'de polling gerekmez" }
+      ]
+    },
+    {
+      "title": "Flutter",
+      "items": [
+        { "slug": "flutter-overview", "title": "Genel Bakış", "description": "Mimari, bağımlılıklar ve checklist" },
+        { "slug": "flutter-screens", "title": "Ekran Haritası", "description": "Navigasyon + Figma önizlemeleri (Lobby)" },
+        { "slug": "flutter-api-client", "title": "API Client", "description": "Dio client, catalog ve session API" },
+        { "slug": "flutter-local-multiplayer", "title": "Local Multiplayer", "description": "host::p1 / ::p2 header kuralları" },
+        { "slug": "flutter-design-system", "title": "Tasarım Sistemi", "description": "Renkler, tipografi — Figma öncesi referans" },
+        { "slug": "flutter-assets", "title": "Medya URL", "description": "imageUrl ve logoUrl çözümleme" },
+        { "slug": "flutter-definition-snapshot", "title": "definitionSnapshot", "description": "metric, revealPolicy, objective" },
+        { "slug": "flutter-session-resume", "title": "Session Resume", "description": "App arka plan, deep link, state restore" },
+        { "slug": "flutter-target-hunt", "title": "Target Hunt", "description": "Adım adım Target Hunt entegrasyonu" },
+        { "slug": "flutter-draft-scope", "title": "Draft Scope & Tur", "description": "DRAFT_CLUB/COUNTRY seçimi ve tur banner" },
+        { "slug": "flutter-draft", "title": "Draft Akışı", "description": "Formasyon, slot seçimi ve sonuç ekranı" },
+        { "slug": "flutter-multiplayer", "title": "Multiplayer", "description": "Aynı cihazda iki oyuncu akışı" },
+        { "slug": "flutter-models", "title": "Veri Modelleri", "description": "Dart modelleri ve Swagger eşlemesi" },
+        { "slug": "flutter-fixtures", "title": "Test Fixtures", "description": "Widget test JSON örnekleri" },
+        { "slug": "flutter-openapi-codegen", "title": "OpenAPI Codegen", "description": "swagger-json → Dart tipleri" }
+      ]
+    },
+    {
+      "title": "Web (Nuxt)",
+      "items": [
+        { "slug": "web-overview", "title": "Genel Bakış", "description": "Mimari, env ve proje yapısı" },
+        { "slug": "web-screens", "title": "Sayfa Haritası", "description": "Route'lar ve ekran akışları" },
+        { "slug": "web-composables", "title": "Composables", "description": "useSession, useCatalog ve API wrapper" }
+      ]
+    }
+  ]
+}

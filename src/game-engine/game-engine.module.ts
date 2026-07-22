@@ -6,6 +6,8 @@ import { ScoreCalculatorRegistry } from './registries/score-calculator.registry'
 import { GameFamilyPluginRegistry } from './registries/game-family-plugin.registry';
 import { MetricRegistrationService } from './metrics/metric-resolvers';
 import { GlobalFreeScopeResolver } from './scopes/global-free.scope-resolver';
+import { RandomClubScopeResolver } from './scopes/random-club.scope-resolver';
+import { RandomCountryScopeResolver } from './scopes/random-country.scope-resolver';
 import {
   DataDistributionTargetGenerator,
   FixedTargetGenerator,
@@ -33,6 +35,8 @@ import { REDIS_CLIENT, NoOpRedisClient } from '../common/security/redis.client';
     GameFamilyPluginRegistry,
     MetricRegistrationService,
     GlobalFreeScopeResolver,
+    RandomClubScopeResolver,
+    RandomCountryScopeResolver,
     DataDistributionTargetGenerator,
     RandomRangeTargetGenerator,
     FixedTargetGenerator,
@@ -65,6 +69,8 @@ export class GameEngineModule implements OnModuleInit {
     private readonly scoreCalculatorRegistry: ScoreCalculatorRegistry,
     private readonly pluginRegistry: GameFamilyPluginRegistry,
     private readonly globalFreeResolver: GlobalFreeScopeResolver,
+    private readonly randomClubResolver: RandomClubScopeResolver,
+    private readonly randomCountryResolver: RandomCountryScopeResolver,
     private readonly dataDistributionGenerator: DataDistributionTargetGenerator,
     private readonly randomRangeGenerator: RandomRangeTargetGenerator,
     private readonly fixedGenerator: FixedTargetGenerator,
@@ -77,6 +83,8 @@ export class GameEngineModule implements OnModuleInit {
 
   onModuleInit(): void {
     this.scopeRegistry.register(this.globalFreeResolver);
+    this.scopeRegistry.register(this.randomClubResolver);
+    this.scopeRegistry.register(this.randomCountryResolver);
     this.targetGeneratorRegistry.register(this.dataDistributionGenerator);
     this.targetGeneratorRegistry.register(this.randomRangeGenerator);
     this.targetGeneratorRegistry.register(this.fixedGenerator);

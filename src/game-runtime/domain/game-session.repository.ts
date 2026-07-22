@@ -23,6 +23,7 @@ export interface GameSessionView {
   definitionSnapshot: GameDefinitionConfig;
   playerMode: PlayerMode;
   currentTurnParticipantId: string | null;
+  currentRound: import('../domain/draft-round').DraftRoundContextResponse | null;
   startedAt: string | null;
   completedAt: string | null;
   expiresAt: string | null;

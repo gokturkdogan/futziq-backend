@@ -14,6 +14,7 @@ export interface PlayerSelectionValidationInput {
   playerId: string;
   slotCode?: string;
   definition: GameDefinitionConfig;
+  sessionScopeParams?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -38,13 +39,19 @@ export class PlayerSelectionValidator {
     }
 
     const scopeResolver = this.scopeRegistry.get(input.definition.scope);
+    const scopeParams = {
+      ...input.definition.scopeParams,
+      ...input.sessionScopeParams,
+    };
     const eligible = await scopeResolver.isPlayerEligible(
       input.playerId,
-      { code: input.definition.scope, params: input.definition.scopeParams },
+      { code: input.definition.scope, params: scopeParams },
       {
         sessionId: input.sessionId,
         definition: input.definition,
-        scopeParams: input.slotCode ? { slotCode: input.slotCode } : undefined,
+        scopeParams: input.slotCode
+          ? { ...scopeParams, slotCode: input.slotCode }
+          : scopeParams,
       },
     );
 

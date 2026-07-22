@@ -1,6 +1,7 @@
 import { GameDefinitionConfig, GameFamily, ObjectiveType } from '../game-engine/contracts/game-types';
 import { PlayerMode } from '../game-runtime/domain/session-runtime';
 import { DraftLineCode } from '../game-runtime/domain/draft-lineup';
+import { DraftRoundContextResponse } from '../game-runtime/domain/draft-round';
 import { GameCapabilities } from './capabilities';
 
 export interface DraftLineupSlotResponse {
@@ -45,6 +46,7 @@ export interface GameSessionResponse {
   family: GameFamily;
   playerMode: PlayerMode;
   currentTurnParticipantId: string | null;
+  currentRound: DraftRoundContextResponse | null;
   definitionSnapshot: GameDefinitionConfig;
   startedAt: string | null;
   completedAt: string | null;
@@ -62,6 +64,7 @@ export interface ActionStateResponse {
   aggregateValue: number;
   playerMode: PlayerMode;
   currentTurnParticipantId: string | null;
+  currentRound: DraftRoundContextResponse | null;
   lineup: DraftLineupSlotResponse[] | null;
   selections: GameSelectionResponse[];
 }

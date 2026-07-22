@@ -1,0 +1,27 @@
+{
+  "fileUrl": "https://www.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ",
+  "fileTitle": "Futz IQ — Mobile",
+  "screens": {
+    "lobby": {
+      "title": "LobbyScreen",
+      "figmaUrl": "https://www.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=2-303",
+      "embedUrl": "https://embed.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=2-303&embed-host=share",
+      "embedWidth": 800,
+      "embedHeight": 450
+    },
+    "family-detail": {
+      "title": "FamilyDetailScreen",
+      "figmaUrl": "https://www.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=3-3",
+      "embedUrl": "https://embed.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=3-3&embed-host=share",
+      "embedWidth": 800,
+      "embedHeight": 450
+    },
+    "setup": {
+      "title": "SetupScreen",
+      "figmaUrl": "https://www.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=3-92",
+      "embedUrl": "https://embed.figma.com/design/PR0pwbBqnvs6hHtDmthzxb/Futz-IQ?node-id=3-92&embed-host=share",
+      "embedWidth": 800,
+      "embedHeight": 450
+    }
+  }
+}

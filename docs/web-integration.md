@@ -7,8 +7,9 @@ Complete reference for integrating the Futz IQ backend into a Nuxt 3 web app fro
 | Resource | URL (local) |
 |----------|-------------|
 | API base | `http://localhost:3000` |
-| Swagger UI | `http://localhost:3000/api/docs` |
-| OpenAPI JSON | `http://localhost:3000/api/docs-json` |
+| Integration docs | `http://localhost:3000/docs` |
+| Swagger UI | `http://localhost:3000/swagger` |
+| OpenAPI JSON | `http://localhost:3000/swagger-json` |
 | Health | `http://localhost:3000/health` |
 | Frontend (typical) | `http://localhost:3000` or `http://localhost:5173` |
 
@@ -447,7 +448,11 @@ async function startGame() {
 
 **Draft setup:**
 
-- No scope picker when `!game.requiresScope`
+- Scope picker **required**: `DRAFT_CLUB` or `DRAFT_COUNTRY`
+- Show `game.scopes` as cards with image + title + description
+- Disable start until scope selected
+
+See [flutter-draft-scope.md](./flutter-draft-scope.md) for full UI spec (applies to web too).
 - Show `capabilities.selectionCount` (6) in subtitle
 
 ### 8.3 Play — `pages/play/[sessionId].vue`
@@ -540,6 +545,22 @@ async function pick(playerId: string) {
 ---
 
 ## 10. Draft renderer
+
+Show `session.currentRound` banner above formation:
+
+```vue
+<!-- components/game/DraftRoundBanner.vue -->
+<template>
+  <div v-if="round" class="round-banner">
+    <img v-if="round.entity.logoUrl" :src="round.entity.logoUrl" :alt="round.entity.name" />
+    <div>
+      <strong>Tur {{ round.roundNumber }} / {{ round.totalRounds }}</strong>
+      <p>{{ round.entity.name }}</p>
+      <small>{{ round.picksInRound }} / {{ round.picksRequired }}</small>
+    </div>
+  </div>
+</template>
+```
 
 ```vue
 <!-- components/game/DraftRenderer.vue -->
@@ -649,7 +670,7 @@ Display resolved scope on play screen: `session.scopeCode` (not `RANDOM`).
 ## 14. OpenAPI / codegen
 
 ```bash
-curl http://localhost:3000/api/docs-json -o openapi.json
+curl http://localhost:3000/swagger-json -o openapi.json
 npx openapi-typescript openapi.json -o app/types/api.generated.ts
 ```
 
@@ -677,6 +698,8 @@ With `strategy: 'prefix'`:
 - [ ] Setup uses `capabilities` manifest
 - [ ] RANDOM scope: `imageUrl === null`, send `scopeCode: RANDOM`
 - [ ] Renderer registry per family
+- [ ] Draft: `scopeCode` is `DRAFT_CLUB` or `DRAFT_COUNTRY`
+- [ ] Draft: `currentRound` banner (entity logo + name)
 - [ ] Draft: `slotCode` on search + action
 - [ ] Result page switches on `kind`
 - [ ] `STATE_VERSION_CONFLICT` → refresh session

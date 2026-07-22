@@ -7,6 +7,7 @@ import {
   GameFamily,
   MetricCode,
   ObjectiveType,
+  ScopeCode,
   TargetGeneratorStrategy,
 } from '../src/game-engine/contracts/game-types';
 import type { SupportedLocale } from '../src/common/locale/locale.constants';
@@ -274,6 +275,60 @@ export function buildDraftGameConfig(objective: ObjectiveType): GameDefinitionCo
     comparison: objective === ObjectiveType.MIN ? ComparisonType.LOWEST : ComparisonType.HIGHEST,
   };
 }
+
+export function buildDraftScopeRuleConfig(
+  scopeCode: DraftGameScopeCode,
+  objective: ObjectiveType,
+): GameDefinitionConfig {
+  const base = buildDraftGameConfig(objective);
+  if (scopeCode === 'DRAFT_CLUB') {
+    return {
+      ...base,
+      scope: ScopeCode.RANDOM_CLUB,
+      roundScopeType: 'CLUB',
+    };
+  }
+  return {
+    ...base,
+    scope: ScopeCode.RANDOM_COUNTRY,
+    roundScopeType: 'COUNTRY',
+  };
+}
+
+export const DRAFT_GAME_SCOPES = [
+  {
+    code: 'DRAFT_CLUB',
+    sortOrder: 1,
+    imageUrl: '/images/scopes/club.png',
+    translations: {
+      tr: {
+        title: 'Kulüp',
+        description: 'Her turda rastgele bir kulüpten oyuncu seç.',
+      },
+      en: {
+        title: 'Club',
+        description: 'Pick a player from a random club each round.',
+      },
+    },
+  },
+  {
+    code: 'DRAFT_COUNTRY',
+    sortOrder: 2,
+    imageUrl: '/images/scopes/country.png',
+    translations: {
+      tr: {
+        title: 'Ülke',
+        description: 'Her turda rastgele bir ülkeden oyuncu seç.',
+      },
+      en: {
+        title: 'Country',
+        description: 'Pick a player from a random country each round.',
+      },
+    },
+  },
+] as const;
+
+export type DraftGameScopeCode = (typeof DRAFT_GAME_SCOPES)[number]['code'];
 
 export const DRAFT_GAMES = [
   {

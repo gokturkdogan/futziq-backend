@@ -1,4 +1,5 @@
 import { GameDefinitionConfig } from '../../game-engine/contracts/game-types';
+import { DraftRoundRuntime } from './draft-round';
 
 export enum PlayerMode {
   SINGLE = 'SINGLE',
@@ -9,6 +10,7 @@ export const MULTIPLAYER_PLAYER_COUNT = 2;
 
 export interface SessionRuntimeMeta {
   playerMode: PlayerMode;
+  draftRound?: DraftRoundRuntime;
 }
 
 type SnapshotWithRuntime = GameDefinitionConfig & {
@@ -30,6 +32,7 @@ export function parseSessionRuntime(snapshot: unknown): SessionRuntimeMeta {
   const playerMode = raw.__session?.playerMode ?? PlayerMode.SINGLE;
   return {
     playerMode: playerMode === PlayerMode.MULTIPLAYER ? PlayerMode.MULTIPLAYER : PlayerMode.SINGLE,
+    draftRound: raw.__session?.draftRound,
   };
 }
 

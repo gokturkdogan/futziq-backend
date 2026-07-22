@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { GAME_SESSION_REPOSITORY } from './domain/game-session.repository';
 import { PrismaGameSessionRepository } from './infrastructure/prisma-game-session.repository';
 import { GameRuntimeService } from './application/game-runtime.service';
+import { DraftRoundScopeService } from './application/draft-round-scope.service';
 import { SessionOrchestrator } from './application/session-orchestrator.service';
 import { GameSessionsController } from './presentation/game-sessions.controller';
 import { FootballDataModule } from '../football-data/football-data.module';
@@ -17,6 +18,7 @@ import { REDIS_CLIENT, NoOpRedisClient } from '../common/security/redis.client';
   providers: [
     GameRuntimeService,
     SessionOrchestrator,
+    DraftRoundScopeService,
     { provide: GAME_SESSION_REPOSITORY, useClass: PrismaGameSessionRepository },
     { provide: IDENTITY_PROVIDER, useClass: DevelopmentIdentityProvider },
     { provide: REDIS_CLIENT, useClass: NoOpRedisClient },

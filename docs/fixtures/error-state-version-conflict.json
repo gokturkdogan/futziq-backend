@@ -1,0 +1,9 @@
+{
+  "code": "STATE_VERSION_CONFLICT",
+  "message": "State version conflict. Refresh and retry.",
+  "details": {
+    "expected": 1,
+    "actual": 2
+  },
+  "traceId": "trace-uuid"
+}

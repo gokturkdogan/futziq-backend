@@ -78,16 +78,19 @@ npm run db:migrate
 npm run db:seed
 ```
 
-## Swagger
+## API Documentation
 
-http://localhost:3000/api/docs
-
-OpenAPI JSON: http://localhost:3000/api/docs-json
+| Resource | URL (local) |
+|----------|-------------|
+| Integration docs (browser) | http://localhost:3000/docs |
+| Swagger UI | http://localhost:3000/swagger |
+| OpenAPI JSON | http://localhost:3000/swagger-json |
 
 **Client integration:**
 
 | Platform | Guide |
 |----------|-------|
+| Docs hub (browser) | http://localhost:3000/docs |
 | Index | [docs/frontend-integration.md](./docs/frontend-integration.md) |
 | Flutter | [docs/flutter-integration.md](./docs/flutter-integration.md) |
 | Web (Nuxt) | [docs/web-integration.md](./docs/web-integration.md) |
@@ -148,24 +151,29 @@ curl http://localhost:3000/api/v1/game-sessions/{sessionId}/result \
 ## Draft API Flow
 
 ```bash
-# 1. Create Draft session (scope gerekmez)
+# 1. Family detail (scope listesi)
+curl http://localhost:3000/api/v1/game-families/DRAFT
+
+# 2. Create Draft session (scope zorunlu)
 curl -X POST http://localhost:3000/api/v1/game-sessions \
   -H "Content-Type: application/json" \
   -H "X-Participant-Id: player-1" \
-  -d '{"familyCode":"DRAFT","gameCode":"TALLEST_XI"}'
+  -d '{"familyCode":"DRAFT","gameCode":"TALLEST_XI","scopeCode":"DRAFT_CLUB"}'
 
-# 2. Search DEF-eligible players (6-slot lineup: GK, DEF1, DEF2, MID1, MID2, ATT)
-curl "http://localhost:3000/api/v1/game-sessions/{sessionId}/players?q=an&slotCode=DEF1" \
+# Yanıt: currentRound.entity (tur 1 kulübü/ülkesi)
+
+# 3. Search (otomatik scope filtresi)
+curl "http://localhost:3000/api/v1/game-sessions/{sessionId}/players?q=an&slotCode=GK" \
   -H "X-Participant-Id: player-1"
 
-# 3. Select player into a lineup slot
+# 4. Select into slot (her tur)
 curl -X POST http://localhost:3000/api/v1/game-sessions/{sessionId}/actions \
   -H "Content-Type: application/json" \
   -H "X-Participant-Id: player-1" \
-  -d '{"actionId":"uuid","expectedVersion":0,"playerId":"...","slotCode":"DEF1"}'
+  -d '{"actionId":"uuid","expectedVersion":0,"playerId":"...","slotCode":"GK"}'
 ```
 
-Tam sözleşme: [docs/flutter-integration.md](./docs/flutter-integration.md) veya [docs/web-integration.md](./docs/web-integration.md). Draft config: `npm run db:update-draft-config`.
+Tam sözleşme: [/docs/flutter-draft-scope](/docs/flutter-draft-scope) · `npm run db:update-draft-config`
 
 ## Extending the Engine
 

@@ -132,6 +132,7 @@ describe('Game Runtime Integration', () => {
       {
         familyCode: 'DRAFT',
         gameCode: 'TALLEST_XI',
+        scopeCode: 'DRAFT_CLUB',
       },
       `draft-${uuidv4()}`,
     );

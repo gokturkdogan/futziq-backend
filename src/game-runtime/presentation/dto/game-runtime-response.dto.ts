@@ -29,6 +29,40 @@ export class PlayerSnapshotDto {
   normalizedPositions?: string[];
 }
 
+export class DraftScopeEntityDto {
+  @ApiProperty({ enum: ['CLUB', 'COUNTRY'] })
+  type!: 'CLUB' | 'COUNTRY';
+
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({ example: 'FC Barcelona' })
+  name!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  logoUrl!: string | null;
+}
+
+export class DraftRoundContextDto {
+  @ApiProperty({ example: 1 })
+  roundNumber!: number;
+
+  @ApiProperty({ example: 6 })
+  totalRounds!: number;
+
+  @ApiProperty({ enum: ['CLUB', 'COUNTRY'] })
+  scopeType!: 'CLUB' | 'COUNTRY';
+
+  @ApiProperty({ example: 1 })
+  picksInRound!: number;
+
+  @ApiProperty({ example: 2, description: '1 for SINGLE, 2 for MULTIPLAYER' })
+  picksRequired!: number;
+
+  @ApiProperty({ type: DraftScopeEntityDto })
+  entity!: DraftScopeEntityDto;
+}
+
 export class DraftLineupSlotDto {
   @ApiProperty({ example: 'GK' })
   slotCode!: string;
@@ -160,6 +194,9 @@ export class GameSessionResponseDto {
   @ApiPropertyOptional({ nullable: true })
   currentTurnParticipantId!: string | null;
 
+  @ApiPropertyOptional({ type: DraftRoundContextDto, nullable: true })
+  currentRound!: DraftRoundContextDto | null;
+
   @ApiProperty({ type: GameDefinitionSnapshotDto })
   definitionSnapshot!: GameDefinitionSnapshotDto;
 
@@ -204,6 +241,9 @@ export class ActionStateResponseDto {
   @ApiPropertyOptional({ nullable: true })
   currentTurnParticipantId!: string | null;
 
+  @ApiPropertyOptional({ type: DraftRoundContextDto, nullable: true })
+  currentRound!: DraftRoundContextDto | null;
+
   @ApiPropertyOptional({ type: [DraftLineupSlotDto], nullable: true })
   lineup!: DraftLineupSlotDto[] | null;
 
@@ -215,7 +255,7 @@ export class ActionResponseDto {
   @ApiProperty({ type: ActionStateResponseDto })
   state!: ActionStateResponseDto;
 
-  @ApiProperty({ enum: ['PLAYER_SELECTED', 'GAME_COMPLETED'] })
+  @ApiProperty({ enum: ['PLAYER_SELECTED', 'GAME_COMPLETED', 'ROUND_STARTED'] })
   eventType!: string;
 
   @ApiProperty()

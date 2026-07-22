@@ -7,8 +7,9 @@ Complete reference for integrating the Futz IQ backend into a Flutter app from s
 | Resource | URL (local) |
 |----------|-------------|
 | API base | `http://localhost:3000` |
-| Swagger UI | `http://localhost:3000/api/docs` |
-| OpenAPI JSON | `http://localhost:3000/api/docs-json` |
+| Integration docs | `http://localhost:3000/docs` |
+| Swagger UI | `http://localhost:3000/swagger` |
+| OpenAPI JSON | `http://localhost:3000/swagger-json` |
 | Health | `http://localhost:3000/health` |
 
 Related: [i18n contract](./i18n-contract.md) · [Adding a game family](./adding-a-game-family.md)
@@ -375,7 +376,7 @@ Full setup data. **Cache key:** `{code}:{locale}:{catalogVersion}`.
 
 **RANDOM scope:** `imageUrl == null` → show shuffle icon. On session create send `scopeCode: "RANDOM"`. Response `scopeCode` will be resolved (e.g. `CAREER`).
 
-**Draft games:** `TALLEST_XI`, `SHORTEST_XI` — `requiresScope: false`, `scopes: null`.
+**Draft games:** `TALLEST_XI`, `SHORTEST_XI` — `requiresScope: true`, scopes: `DRAFT_CLUB`, `DRAFT_COUNTRY`. Each round assigns random club/country via `currentRound.entity`. See [flutter-draft-scope.md](./flutter-draft-scope.md).
 
 ---
 
@@ -505,20 +506,24 @@ Audit trail; optional for Flutter v1.
 
 ---
 
-## 10. Draft flow (6 players, 1-2-2-1)
+## 10. Draft flow (6 players, round-based scope)
 
 ```
 1. GET /game-families/DRAFT
 2. User picks TALLEST_XI or SHORTEST_XI
-3. POST /game-sessions { familyCode: DRAFT, gameCode: TALLEST_XI }
-4. Render participants[0].lineup (6 slots)
-5. User taps empty slot → set activeSlotCode
-6. Search with slotCode: GET /players?q=...&slotCode=GK
-7. POST /actions { ..., slotCode: activeSlotCode }
-8. Repeat until all 6 slots occupied
-9. GET /result → kind == DRAFT
-10. Show lineup + totalMetricValue; objective MAX = tallest total
+3. User picks scope: DRAFT_CLUB or DRAFT_COUNTRY
+4. POST /game-sessions { familyCode: DRAFT, gameCode, scopeCode, playerMode }
+5. Show currentRound.entity (club/country logo + name)
+6. Render participants[0].lineup (6 slots)
+7. User taps empty slot → activeSlotCode
+8. GET /players?q=...&slotCode=GK (filtered by round entity)
+9. POST /actions { ..., slotCode }
+10. Update currentRound from response; on round change show new entity
+11. Repeat until 6 rounds complete
+12. GET /result → kind == DRAFT
 ```
+
+Full scope picker UI: [flutter-draft-scope.md](./flutter-draft-scope.md)
 
 **Formation slots:**
 
@@ -595,7 +600,7 @@ lib/
 ## 14. OpenAPI codegen (optional)
 
 ```bash
-curl http://localhost:3000/api/docs-json -o openapi.json
+curl http://localhost:3000/swagger-json -o openapi.json
 dart run build_runner build  # with openapi_generator or similar
 ```
 
@@ -610,6 +615,8 @@ Swagger schemas match this document. Prefer `kind` discriminator for results.
 - [ ] Setup UI reads `capabilities`, not hardcoded family
 - [ ] `actionId` = new UUID per selection attempt
 - [ ] `expectedVersion` synced after every action
+- [ ] Draft: `scopeCode` is `DRAFT_CLUB` or `DRAFT_COUNTRY`
+- [ ] Draft: `currentRound` banner with entity logo/name
 - [ ] Draft sends `slotCode` on search + action
 - [ ] RANDOM scope sends `scopeCode: "RANDOM"`
 - [ ] Result screen switches on `result.kind`

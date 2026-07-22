@@ -1,0 +1,40 @@
+{
+  "code": "TARGET_HUNT",
+  "catalogVersion": "2026-07-22",
+  "games": [
+    {
+      "code": "TALLEST_XI",
+      "title": "En Uzun 6",
+      "description": "1 kaleci, 2 defans, 2 orta saha, 1 forvet ile en uzun kadroyu kur.",
+      "imageUrl": "/images/games/tallest-xi.png",
+      "bannerImageUrl": "/images/games/banners/tallest-xi.png",
+      "sortOrder": 1,
+      "requiresScope": true,
+      "capabilities": {
+        "family": "DRAFT",
+        "requiresScope": true,
+        "selectionCount": 6,
+        "slotBased": true,
+        "hasTarget": false,
+        "supportedActions": ["SELECT_PLAYER"],
+        "playerMode": "BOTH"
+      },
+      "scopes": [
+        {
+          "code": "DRAFT_CLUB",
+          "title": "Kulüp",
+          "description": "Her turda rastgele bir kulüpten oyuncu seç.",
+          "imageUrl": "/images/scopes/club.png",
+          "sortOrder": 1
+        },
+        {
+          "code": "DRAFT_COUNTRY",
+          "title": "Ülke",
+          "description": "Her turda rastgele bir ülkeden oyuncu seç.",
+          "imageUrl": "/images/scopes/country.png",
+          "sortOrder": 2
+        }
+      ]
+    }
+  ]
+}
