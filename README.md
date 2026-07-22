@@ -84,7 +84,14 @@ http://localhost:3000/api/docs
 
 OpenAPI JSON: http://localhost:3000/api/docs-json
 
-**Frontend entegrasyonu için:** [docs/frontend-integration.md](./docs/frontend-integration.md)
+**Client integration:**
+
+| Platform | Guide |
+|----------|-------|
+| Index | [docs/frontend-integration.md](./docs/frontend-integration.md) |
+| Flutter | [docs/flutter-integration.md](./docs/flutter-integration.md) |
+| Web (Nuxt) | [docs/web-integration.md](./docs/web-integration.md) |
+| i18n | [docs/i18n-contract.md](./docs/i18n-contract.md) |
 
 ## Game Families API
 
@@ -158,7 +165,7 @@ curl -X POST http://localhost:3000/api/v1/game-sessions/{sessionId}/actions \
   -d '{"actionId":"uuid","expectedVersion":0,"playerId":"...","slotCode":"DEF1"}'
 ```
 
-Tam sözleşme: [docs/frontend-integration.md](./docs/frontend-integration.md). Draft config güncelleme: `npm run db:update-draft-config`.
+Tam sözleşme: [docs/flutter-integration.md](./docs/flutter-integration.md) veya [docs/web-integration.md](./docs/web-integration.md). Draft config: `npm run db:update-draft-config`.
 
 ## Extending the Engine
 

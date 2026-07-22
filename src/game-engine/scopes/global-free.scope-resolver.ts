@@ -61,28 +61,17 @@ export class GlobalFreeScopeResolver implements ScopeResolver {
         : undefined,
     });
 
-    const summaries: EligiblePlayerSummary[] = items
-      .filter((player) => {
-        if (!slot || !context.definition.positionEligibilityPolicy) {
-          return true;
-        }
-        return this.positionNormalizer.isEligibleForSlot(
-          player,
-          slot,
-          context.definition.positionEligibilityPolicy,
-        );
-      })
-      .map((p) => ({
-        id: p.id,
-        displayName: p.displayName,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        primaryPosition: p.primaryPosition,
-        subPosition: p.subPosition,
-        normalizedPositions: this.positionNormalizer.getNormalizedPositions(p),
-        isActive: p.isActive,
-        alreadySelected: excludeSet.has(p.id),
-      }));
+    const summaries: EligiblePlayerSummary[] = items.map((p) => ({
+      id: p.id,
+      displayName: p.displayName,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      primaryPosition: p.primaryPosition,
+      subPosition: p.subPosition,
+      normalizedPositions: this.positionNormalizer.getNormalizedPositions(p),
+      isActive: p.isActive,
+      alreadySelected: excludeSet.has(p.id),
+    }));
 
     return toPaginatedResult(summaries, total, query.page, query.limit);
   }

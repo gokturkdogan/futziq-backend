@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../football-data/infrastructure/prisma.service';
 import {
-  GameActionType,
   GameEventType,
   ObjectiveType,
   RevealPolicy,
@@ -15,28 +14,22 @@ import {
   GameSessionView,
 } from '../domain/game-session.repository';
 import { DomainException, ErrorCode } from '../../common/errors/domain.exception';
-import {
-  ProcessActionInput,
-  ProcessActionResult,
-} from '../../game-engine/contracts/game-family-handler';
-import { GameFamilyRegistry } from '../../game-engine/registries/game-family.registry';
+import { GameFamilyPluginRegistry } from '../../game-engine/registries/game-family-plugin.registry';
 import { v4 as uuidv4 } from 'uuid';
 import {
   FOOTBALL_DATA_REPOSITORY,
   FootballDataRepository,
 } from '../../football-data/domain/football-data.repository';
-import { Inject } from '@nestjs/common';
 import {
   GAME_CATALOG_REPOSITORY,
   GameCatalogRepository,
 } from '../../game-catalog/domain/game-catalog.repository';
+import { LocalizedConfigService } from '../../game-catalog/application/localized-config.service';
 import {
   buildParticipantExternalIds,
   canAccessSession,
   encodeDefinitionSnapshot,
   getCurrentTurnParticipantId,
-  getExpectedTurnParticipant,
-  isSessionFullyComplete,
   parseSessionRuntime,
   PlayerMode,
 } from '../domain/session-runtime';
@@ -52,11 +45,12 @@ const GAME_SESSION_VIEW_INCLUDE = {
 export class PrismaGameSessionRepository implements GameSessionRepository {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly gameFamilyRegistry: GameFamilyRegistry,
+    private readonly pluginRegistry: GameFamilyPluginRegistry,
     @Inject(GAME_CATALOG_REPOSITORY)
     private readonly catalogRepository: GameCatalogRepository,
     @Inject(FOOTBALL_DATA_REPOSITORY)
     private readonly footballData: FootballDataRepository,
+    private readonly localizedConfig: LocalizedConfigService,
   ) {}
 
   async createSession(input: CreateSessionInput): Promise<GameSessionView> {
@@ -104,7 +98,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     const config = parseGameDefinitionConfig(resolved.config);
     const playerMode = input.playerMode ?? PlayerMode.SINGLE;
     const seed = uuidv4();
-    const handler = this.gameFamilyRegistry.get(config.family);
+    const handler = this.pluginRegistry.get(config.family);
     const sessionId = uuidv4();
     const participantExternalIds = buildParticipantExternalIds(input.externalParticipantId, playerMode);
 
@@ -152,338 +146,35 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       include: GAME_SESSION_VIEW_INCLUDE,
     });
 
-    return this.toView(session);
+    return this.toView(session, 'en');
   }
 
-  async getSession(sessionId: string): Promise<GameSessionView | null> {
-    const session = await this.prisma.gameSession.findUnique({
-      where: { id: sessionId },
-      include: GAME_SESSION_VIEW_INCLUDE,
-    });
-    return session ? this.toView(session) : null;
+  async getSession(sessionId: string, locale = 'en'): Promise<GameSessionView | null> {
+    return this.getSessionView(sessionId, locale);
   }
 
   async getSessionForParticipant(
     sessionId: string,
     externalParticipantId: string,
+    locale = 'en',
   ): Promise<GameSessionView | null> {
-    const session = await this.getSession(sessionId);
+    const session = await this.getSessionView(sessionId, locale);
     if (!session) return null;
     const belongs = canAccessSession(session.participants, externalParticipantId);
     return belongs ? session : null;
   }
 
-  async processSelectPlayerAction(
-    input: ProcessActionInput,
-    hooks: Parameters<GameSessionRepository['processSelectPlayerAction']>[1],
-  ): Promise<ProcessActionResult> {
-    const existing = await this.prisma.gameAction.findFirst({
-      where: {
-        gameSessionId: input.sessionId,
-        actionId: input.actionId,
-      },
-    });
-
-    if (existing?.processedAt) {
-      const state = await this.buildState(input.sessionId, input.participantId);
-      return {
-        state,
-        eventType: GameEventType.PLAYER_SELECTED,
-        completed: state.status === 'COMPLETED',
-        idempotentReplay: true,
-      };
-    }
-
+  async getSessionView(sessionId: string, locale = 'en'): Promise<GameSessionView | null> {
     const session = await this.prisma.gameSession.findUnique({
-      where: { id: input.sessionId },
-      include: { participants: true, selections: true },
+      where: { id: sessionId },
+      include: GAME_SESSION_VIEW_INCLUDE,
     });
-
-    if (!session) {
-      throw new DomainException(ErrorCode.GAME_SESSION_NOT_FOUND, 'Game session not found.');
-    }
-
-    if (session.status !== 'IN_PROGRESS') {
-      throw new DomainException(ErrorCode.GAME_SESSION_NOT_ACTIVE, 'Game session is not active.', {
-        status: session.status,
-      });
-    }
-
-    if (session.stateVersion !== input.expectedVersion) {
-      throw new DomainException(
-        ErrorCode.STATE_VERSION_CONFLICT,
-        'State version conflict. Refresh and retry.',
-        { expected: input.expectedVersion, actual: session.stateVersion },
-      );
-    }
-
-    const participant = session.participants.find((p) => p.id === input.participantId);
-    if (!participant) {
-      throw new DomainException(ErrorCode.INVALID_GAME_ACTION, 'Participant not found in session.');
-    }
-
-    const definition = parseGameDefinitionConfig(session.definitionSnapshot);
-    const runtime = parseSessionRuntime(session.definitionSnapshot);
-    const expectedParticipant = getExpectedTurnParticipant(
-      session.participants,
-      session.selections.length,
-      runtime.playerMode,
-      definition.selectionCount,
-    );
-
-    if (runtime.playerMode === PlayerMode.MULTIPLAYER) {
-      if (!expectedParticipant || expectedParticipant.id !== participant.id) {
-        throw new DomainException(
-          ErrorCode.NOT_YOUR_TURN,
-          'It is not this participant turn.',
-          {
-            currentTurnParticipantId: expectedParticipant?.id ?? null,
-          },
-        );
-      }
-    }
-
-    if (participant.selectionCount >= definition.selectionCount) {
-      throw new DomainException(
-        ErrorCode.SELECTION_LIMIT_REACHED,
-        'Selection limit reached for this participant.',
-      );
-    }
-
-    if (
-      runtime.playerMode === PlayerMode.MULTIPLAYER &&
-      (await this.isPlayerSelectedInSession(input.sessionId, input.payload.playerId))
-    ) {
-      throw new DomainException(
-        ErrorCode.PLAYER_ALREADY_SELECTED,
-        'Player has already been selected in this session.',
-        { playerId: input.payload.playerId },
-      );
-    }
-
-    const selectedPlayerIds = session.selections
-      .filter((s) => s.participantId === participant.id)
-      .map((s) => s.playerId);
-    const existingSelections = session.selections
-      .filter((s) => s.participantId === participant.id)
-      .map((s) => ({
-        playerId: s.playerId,
-        selectionOrder: s.selectionOrder,
-        slotCode:
-          ((s.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ?? null,
-        metricValue: s.metricValueSnapshot,
-        playerSnapshot: s.playerSnapshot as Record<string, unknown>,
-      }));
-
-    const { metricValue, playerSnapshot } = await hooks.validateAndResolve({
-      sessionId: input.sessionId,
-      participantId: participant.id,
-      playerId: input.payload.playerId,
-      slotCode: 'slotCode' in input.payload ? input.payload.slotCode : undefined,
-      definition,
-      selectedPlayerIds,
-      existingSelections,
-    });
-
-    const selectionOrder = participant.selectionCount + 1;
-    const newAggregate = participant.aggregateValue + metricValue;
-    const newSelectionCount = selectionOrder;
-    const newStateVersion = session.stateVersion + 1;
-    const pendingSelectionCounts = new Map(
-      session.participants.map((entry) => [entry.id, entry.selectionCount]),
-    );
-    pendingSelectionCounts.set(participant.id, newSelectionCount);
-    const sessionComplete = isSessionFullyComplete(
-      session.participants,
-      definition.selectionCount,
-      pendingSelectionCounts,
-    );
-    const now = new Date();
-
-    const versionUpdate = await this.prisma.gameSession.updateMany({
-      where: {
-        id: input.sessionId,
-        stateVersion: input.expectedVersion,
-        status: 'IN_PROGRESS',
-      },
-      data: {
-        stateVersion: newStateVersion,
-        ...(sessionComplete ? { status: 'COMPLETED', completedAt: now } : {}),
-      },
-    });
-
-    if (versionUpdate.count === 0) {
-      throw new DomainException(
-        ErrorCode.STATE_VERSION_CONFLICT,
-        'State version conflict. Refresh and retry.',
-      );
-    }
-
-    const lastEvent = await this.prisma.gameEvent.findFirst({
-      where: { gameSessionId: input.sessionId },
-      orderBy: { sequence: 'desc' },
-    });
-    const nextSequence = (lastEvent?.sequence ?? 0) + 1;
-
-    try {
-      await this.prisma.gameAction.create({
-        data: {
-          actionId: input.actionId,
-          gameSessionId: input.sessionId,
-          participantId: participant.id,
-          actionType: GameActionType.SELECT_PLAYER,
-          expectedVersion: input.expectedVersion,
-          payload: input.payload as object,
-          processedAt: now,
-          resultVersion: newStateVersion,
-        },
-      });
-    } catch (error) {
-      if (this.isUniqueViolation(error)) {
-        const state = await this.buildState(input.sessionId, input.participantId);
-        return {
-          state,
-          eventType: GameEventType.PLAYER_SELECTED,
-          completed: state.status === 'COMPLETED',
-          idempotentReplay: true,
-        };
-      }
-      throw error;
-    }
-
-    await this.prisma.gameSelection.create({
-      data: {
-        gameSessionId: input.sessionId,
-        participantId: participant.id,
-        playerId: input.payload.playerId,
-        selectionOrder,
-        metricCode: definition.metric,
-        metricValueSnapshot: metricValue,
-        playerSnapshot: {
-          ...playerSnapshot,
-          slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
-        } as object,
-      },
-    });
-
-    await this.prisma.gameParticipant.update({
-      where: { id: participant.id },
-      data: {
-        aggregateValue: newAggregate,
-        selectionCount: newSelectionCount,
-        status: sessionComplete ? 'COMPLETED' : 'ACTIVE',
-      },
-    });
-
-    await this.prisma.gameEvent.create({
-      data: {
-        gameSessionId: input.sessionId,
-        sequence: nextSequence,
-        eventType: GameEventType.PLAYER_SELECTED,
-        participantId: participant.id,
-        payload: {
-          playerId: input.payload.playerId,
-          selectionOrder,
-          slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
-          metricValue,
-          aggregateValue: newAggregate,
-        },
-      },
-    });
-
-    if (sessionComplete && session.targetValue != null) {
-      for (const sessionParticipant of session.participants) {
-        const participantSelections = session.selections
-          .filter((selection) => selection.participantId === sessionParticipant.id)
-          .map((selection) => ({
-            playerId: selection.playerId,
-            selectionOrder: selection.selectionOrder,
-            slotCode:
-              ((selection.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ??
-              null,
-            metricValue: selection.metricValueSnapshot,
-            playerSnapshot: selection.playerSnapshot as Record<string, unknown>,
-          }));
-
-        const participantAggregate =
-          sessionParticipant.id === participant.id
-            ? newAggregate
-            : sessionParticipant.aggregateValue;
-
-        if (sessionParticipant.id === participant.id) {
-          participantSelections.push({
-            playerId: input.payload.playerId,
-            selectionOrder,
-            slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
-            metricValue,
-            playerSnapshot: {
-              ...playerSnapshot,
-              slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
-            },
-          });
-        }
-
-        const completion = await hooks.onComplete({
-          targetValue: session.targetValue,
-          aggregateValue: participantAggregate,
-          definition,
-          selections: participantSelections,
-          startedAt: session.startedAt,
-          completedAt: now,
-        });
-
-        await this.prisma.gameResult.create({
-          data: {
-            gameSessionId: input.sessionId,
-            participantId: sessionParticipant.id,
-            targetValue: completion.targetValue,
-            aggregateValue: completion.aggregateValue,
-            absoluteDifference: completion.absoluteDifference,
-            exactHit: completion.exactHit,
-            performanceRating: completion.performanceRating as
-              'PERFECT' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
-            resultPayload: completion.resultPayload as object,
-          },
-        });
-      }
-
-      await this.prisma.gameParticipant.updateMany({
-        where: { gameSessionId: input.sessionId },
-        data: { status: 'COMPLETED' },
-      });
-
-      await this.prisma.gameEvent.create({
-        data: {
-          gameSessionId: input.sessionId,
-          sequence: nextSequence + 1,
-          eventType: GameEventType.GAME_COMPLETED,
-          participantId: participant.id,
-          payload: {
-            playerMode: runtime.playerMode,
-            participantCount: session.participants.length,
-          },
-        },
-      });
-    }
-
-    const state = await this.buildState(input.sessionId, input.participantId);
-    return {
-      state,
-      eventType: sessionComplete ? GameEventType.GAME_COMPLETED : GameEventType.PLAYER_SELECTED,
-      completed: sessionComplete,
-      idempotentReplay: false,
-    };
+    return session ? this.toView(session, locale) : null;
   }
 
-  private isUniqueViolation(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code: string }).code === 'P2002'
-    );
+  buildActionState(sessionId: string, participantId: string, locale = 'en') {
+    return this.buildState(sessionId, participantId, locale);
   }
-
   async getEvents(sessionId: string) {
     const events = await this.prisma.gameEvent.findMany({
       where: { gameSessionId: sessionId },
@@ -502,6 +193,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
   async getResult(
     sessionId: string,
     externalParticipantId: string,
+    locale = 'en',
   ): Promise<GameResultView | null> {
     const session = await this.prisma.gameSession.findUnique({
       where: { id: sessionId },
@@ -523,12 +215,13 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     const result = session.results.find((r) => r.participantId === participant.id);
     if (!result) return null;
 
-    return this.toResultView(session, participant, result);
+    return this.toResultView(session, participant, result, locale);
   }
 
   async getResults(
     sessionId: string,
     externalParticipantId: string,
+    locale = 'en',
   ): Promise<GameResultView[]> {
     const session = await this.prisma.gameSession.findUnique({
       where: { id: sessionId },
@@ -544,7 +237,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       .map((participant) => {
         const result = session.results.find((entry) => entry.participantId === participant.id);
         if (!result) return null;
-        return this.toResultView(session, participant, result);
+        return this.toResultView(session, participant, result, locale);
       })
       .filter((result): result is GameResultView => result !== null)
       .sort((left, right) => {
@@ -558,6 +251,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     session: {
       id: string;
       status: string;
+      definitionSnapshot: unknown;
       participants: Array<{ id: string; selectionCount: number }>;
     },
     participant: { id: string; selectionCount: number },
@@ -570,6 +264,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       performanceRating: string;
       resultPayload: unknown;
     },
+    locale = 'en',
   ): GameResultView {
     const payload = result.resultPayload as {
       selections?: Array<{
@@ -588,6 +283,9 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       averageMetricValue?: number;
     };
 
+    const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const lineup = this.localizeLineup(payload.lineup ?? null, definition, locale);
+
     return {
       id: result.id,
       sessionId: session.id,
@@ -604,10 +302,41 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       resultStatus: session.status === 'COMPLETED' ? 'FINAL' : 'PENDING',
       objective: payload.objective ?? null,
       lineupTemplate: payload.lineupTemplate ?? null,
-      lineup: payload.lineup ?? null,
+      lineup,
       totalMetricValue: payload.totalMetricValue ?? result.aggregateValue,
       averageMetricValue: payload.averageMetricValue ?? null,
     };
+  }
+
+  private readSlotCode(
+    selection: { slotCode?: string | null; playerSnapshot: unknown },
+  ): string | null {
+    if (selection.slotCode) {
+      return selection.slotCode;
+    }
+    const fromSnapshot = (selection.playerSnapshot as Record<string, unknown>).slotCode;
+    return typeof fromSnapshot === 'string' ? fromSnapshot : null;
+  }
+
+  private localizeLineup(
+    lineup: DraftLineupSlotView[] | null,
+    definition: ReturnType<typeof parseGameDefinitionConfig>,
+    locale: string,
+  ): DraftLineupSlotView[] | null {
+    if (!lineup || !definition.lineupTemplate) {
+      return lineup;
+    }
+    const localizedTemplate = this.localizedConfig.localizeLineupTemplate(
+      definition.lineupTemplate,
+      locale,
+    );
+    const displayNames = new Map(
+      localizedTemplate.slots.map((slot) => [slot.code, slot.displayName]),
+    );
+    return lineup.map((slot) => ({
+      ...slot,
+      displayName: displayNames.get(slot.slotCode) ?? slot.displayName,
+    }));
   }
 
   private mapParticipantSelections(
@@ -615,6 +344,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     selections: Array<{
       participantId: string;
       playerId: string;
+      slotCode?: string | null;
       metricValueSnapshot: number;
       playerSnapshot: unknown;
     }>,
@@ -624,9 +354,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       .filter((selection) => selection.participantId === participantId)
       .map((selection) => ({
         playerId: selection.playerId,
-        slotCode:
-          ((selection.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ??
-          null,
+        slotCode: this.readSlotCode(selection),
         metricValue: revealImmediate ? selection.metricValueSnapshot : 0,
         playerSnapshot: selection.playerSnapshot as Record<string, unknown>,
       }));
@@ -638,15 +366,18 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     selections: Array<{
       participantId: string;
       playerId: string;
+      slotCode?: string | null;
       metricValueSnapshot: number;
       playerSnapshot: unknown;
     }>,
     revealImmediate: boolean,
+    locale: string,
   ) {
-    return buildDraftLineup(
+    const lineup = buildDraftLineup(
       definition,
       this.mapParticipantSelections(participantId, selections, revealImmediate),
     );
+    return this.localizeLineup(lineup, definition, locale);
   }
 
   async getPlayerSnapshot(playerId: string): Promise<Record<string, unknown> | null> {
@@ -671,7 +402,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     return count > 0;
   }
 
-  private async buildState(sessionId: string, participantId: string) {
+  private async buildState(sessionId: string, participantId: string, locale = 'en') {
     const session = await this.prisma.gameSession.findUniqueOrThrow({
       where: { id: sessionId },
       include: { participants: true, selections: true },
@@ -701,6 +432,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
             participant.id,
             session.selections,
             revealImmediate,
+            locale,
           )
         : null,
       selections: session.selections
@@ -708,8 +440,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         .map((s) => ({
           playerId: s.playerId,
           selectionOrder: s.selectionOrder,
-          slotCode:
-            ((s.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ?? null,
+          slotCode: this.readSlotCode(s),
           metricValue: revealImmediate ? s.metricValueSnapshot : null,
           playerSnapshot: s.playerSnapshot as Record<string, unknown>,
           revealed: revealImmediate,
@@ -746,7 +477,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       metricValueSnapshot: number;
       playerSnapshot: unknown;
     }>;
-  }): GameSessionView {
+  }, locale = 'en'): GameSessionView {
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
     const runtime = parseSessionRuntime(session.definitionSnapshot);
     const revealImmediate = definition.revealPolicy === RevealPolicy.IMMEDIATE;
@@ -781,6 +512,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
           p.id,
           session.selections,
           revealImmediate,
+          locale,
         ),
       })),
       selections: session.selections.map((s) => ({
@@ -788,8 +520,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         participantId: s.participantId,
         playerId: s.playerId,
         selectionOrder: s.selectionOrder,
-        slotCode:
-          ((s.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ?? null,
+        slotCode: this.readSlotCode(s),
         metricCode: s.metricCode,
         metricValueSnapshot: revealImmediate ? s.metricValueSnapshot : 0,
         playerSnapshot: s.playerSnapshot as Record<string, unknown>,

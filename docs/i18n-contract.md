@@ -90,6 +90,24 @@ Source of truth: `src/common/errors/domain.exception.ts` (`ErrorCode` enum).
 | `PERFECT` | `enums.performance.PERFECT` |
 | `SINGLE`  | `enums.playerMode.SINGLE` |
 
+## i18n bundle endpoint
+
+```
+GET /api/v1/meta/i18n-bundle?locale=tr
+```
+
+```json
+{
+  "errors": { "errors.NOT_YOUR_TURN": "Sıra sende değil" },
+  "enums": { "enums.performance.PERFECT": "Mükemmel" },
+  "slots": { "slots.GK": "Kaleci" }
+}
+```
+
+Also: `GET /api/v1/meta/enums?locale=tr` (enum labels only).
+
+**Platform guides:** [flutter-integration.md](./flutter-integration.md) · [web-integration.md](./web-integration.md)
+
 ## Web (Nuxt)
 
 - URL strategy: `prefix` → `/tr/...`, `/en/...`
@@ -99,7 +117,9 @@ Source of truth: `src/common/errors/domain.exception.ts` (`ErrorCode` enum).
 - SEO: `useLocaleHead()`, hreflang, sitemap (indexable pages only)
 - Play/session URLs: `noindex, nofollow`
 
-## Flutter app (future repo)
+## Flutter app
+
+See [flutter-integration.md](./flutter-integration.md) for the full mobile integration guide.
 
 ### Locale storage
 

@@ -52,7 +52,7 @@ export class SelectPlayerActionDto {
   @MinLength(1)
   playerId!: string;
 
-  @ApiPropertyOptional({ example: 'LB' })
+  @ApiPropertyOptional({ example: 'DEF1', description: 'Required for DRAFT family (capabilities.slotBased)' })
   @IsOptional()
   @IsString()
   @MinLength(2)
@@ -65,21 +65,24 @@ export class PlayerSearchQueryDto {
   @MinLength(2)
   q!: string;
 
-  @ApiPropertyOptional({ example: 1 })
+  @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ example: 20 })
+  @ApiPropertyOptional({ example: 20, default: 20, maximum: 50 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   limit?: number = 20;
 
-  @ApiPropertyOptional({ example: 'LB' })
+  @ApiPropertyOptional({
+    example: 'DEF1',
+    description: 'Draft only — filter by formation slot (GK, DEF1, DEF2, MID1, MID2, ATT)',
+  })
   @IsOptional()
   @IsString()
   @MinLength(2)

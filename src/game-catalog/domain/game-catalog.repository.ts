@@ -17,6 +17,7 @@ export interface GameSummaryView {
   sortOrder: number;
   requiresScope: boolean;
   scopes: GameScopeSummaryView[] | null;
+  config: unknown | null;
 }
 
 export interface GameFamilySummaryView {
@@ -30,6 +31,7 @@ export interface GameFamilySummaryView {
 }
 
 export interface GameFamilyDetailView extends GameFamilySummaryView {
+  catalogVersion: string;
   games: GameSummaryView[];
 }
 

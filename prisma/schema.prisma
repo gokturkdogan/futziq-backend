@@ -430,6 +430,7 @@ model GameSelection {
   participantId       String   @map("participant_id")
   playerId            String   @map("player_id")
   selectionOrder      Int      @map("selection_order")
+  slotCode            String?  @map("slot_code")
   metricCode          String   @map("metric_code")
   metricValueSnapshot Int      @map("metric_value_snapshot")
   playerSnapshot      Json     @map("player_snapshot")
@@ -440,6 +441,7 @@ model GameSelection {
 
   @@unique([gameSessionId, participantId, playerId])
   @@unique([gameSessionId, participantId, selectionOrder])
+  @@index([gameSessionId, playerId])
   @@map("game_selections")
 }
 

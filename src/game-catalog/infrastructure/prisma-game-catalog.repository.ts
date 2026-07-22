@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../../football-data/infrastructure/prisma.service';
 import { pickTranslation } from '../../common/locale/pick-translation';
 import {
@@ -14,7 +15,13 @@ import {
 
 @Injectable()
 export class PrismaGameCatalogRepository implements GameCatalogRepository {
+  private catalogCache = new Map<string, { version: string; data: GameFamilyDetailView }>();
+
   constructor(private readonly prisma: PrismaService) {}
+
+  private buildCatalogVersion(updatedAt: Date, gameCount: number): string {
+    return createHash('sha1').update(`${updatedAt.toISOString()}:${gameCount}`).digest('hex').slice(0, 12);
+  }
 
   findAllActiveFamilies(locale: string): Promise<GameFamilySummaryView[]> {
     return this.prisma.gameFamily
@@ -59,6 +66,12 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
   }
 
   async findFamilyByCode(code: string, locale: string): Promise<GameFamilyDetailView | null> {
+    const cacheKey = `${code}:${locale}`;
+    const cached = this.catalogCache.get(cacheKey);
+    if (cached) {
+      return cached.data;
+    }
+
     const family = await this.prisma.gameFamily.findFirst({
       where: { code, status: 'ACTIVE' },
       include: {
@@ -93,7 +106,7 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
       description: family.description,
     });
 
-    return {
+    const detail: GameFamilyDetailView = {
       id: family.id,
       code: family.code,
       title: familyLocalized.title,
@@ -101,11 +114,17 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
       imageUrl: family.imageUrl,
       logoUrl: family.logoUrl,
       sortOrder: family.sortOrder,
+      catalogVersion: this.buildCatalogVersion(family.updatedAt, family.games.length),
       games: family.games.map((game) => {
         const gameLocalized = pickTranslation(game.translations, locale, {
           title: game.title,
           description: game.description,
         });
+
+        const scopeConfig =
+          game.requiresScope && game.scopeRules.length > 0
+            ? game.scopeRules[0]?.config ?? null
+            : game.config;
 
         return {
           id: game.id,
@@ -116,6 +135,7 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
           bannerImageUrl: game.bannerImageUrl,
           sortOrder: game.sortOrder,
           requiresScope: game.requiresScope,
+          config: scopeConfig ?? game.config,
           scopes: game.requiresScope
             ? game.scopeRules.map((rule) => {
                 const scopeLocalized = pickTranslation(rule.scope.translations, locale, {
@@ -136,6 +156,13 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
         };
       }),
     };
+
+    this.catalogCache.set(cacheKey, {
+      version: detail.catalogVersion,
+      data: detail,
+    });
+
+    return detail;
   }
 
   async resolvePlayConfig(input: {

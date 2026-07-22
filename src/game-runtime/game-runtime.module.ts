@@ -1,7 +1,8 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { GAME_SESSION_REPOSITORY } from './domain/game-session.repository';
 import { PrismaGameSessionRepository } from './infrastructure/prisma-game-session.repository';
 import { GameRuntimeService } from './application/game-runtime.service';
+import { SessionOrchestrator } from './application/session-orchestrator.service';
 import { GameSessionsController } from './presentation/game-sessions.controller';
 import { FootballDataModule } from '../football-data/football-data.module';
 import { GameCatalogModule } from '../game-catalog/game-catalog.module';
@@ -11,10 +12,11 @@ import { DevelopmentIdentityProvider } from '../common/security/development-iden
 import { REDIS_CLIENT, NoOpRedisClient } from '../common/security/redis.client';
 
 @Module({
-  imports: [FootballDataModule, GameCatalogModule, forwardRef(() => GameEngineModule)],
+  imports: [FootballDataModule, GameCatalogModule, GameEngineModule],
   controllers: [GameSessionsController],
   providers: [
     GameRuntimeService,
+    SessionOrchestrator,
     { provide: GAME_SESSION_REPOSITORY, useClass: PrismaGameSessionRepository },
     { provide: IDENTITY_PROVIDER, useClass: DevelopmentIdentityProvider },
     { provide: REDIS_CLIENT, useClass: NoOpRedisClient },

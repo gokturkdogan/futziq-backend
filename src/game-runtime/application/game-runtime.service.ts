@@ -2,22 +2,23 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GAME_SESSION_REPOSITORY, GameSessionRepository } from '../domain/game-session.repository';
 import { DomainException, ErrorCode } from '../../common/errors/domain.exception';
-import { GameFamilyRegistry } from '../../game-engine/registries/game-family.registry';
 import { ScopeRegistry } from '../../game-engine/registries/scope.registry';
 import { parseGameDefinitionConfig } from '../../game-engine/core/config-parser';
 import { PlayerMode } from '../domain/session-runtime';
+import { SessionOrchestrator } from './session-orchestrator.service';
+import { ClientViewMapper } from '../../client-contract/client-view.mapper';
 
 @Injectable()
 export class GameRuntimeService {
   constructor(
     @Inject(GAME_SESSION_REPOSITORY)
     private readonly sessionRepository: GameSessionRepository,
-    private readonly gameFamilyRegistry: GameFamilyRegistry,
     private readonly scopeRegistry: ScopeRegistry,
+    private readonly sessionOrchestrator: SessionOrchestrator,
     private readonly configService: ConfigService,
   ) {}
 
-  createSession(
+  async createSession(
     input: {
       familyCode: string;
       gameCode: string;
@@ -26,25 +27,29 @@ export class GameRuntimeService {
       playerMode?: PlayerMode;
     },
     externalParticipantId: string,
+    locale = 'en',
   ) {
     const expiryHours = this.configService.get<number>('SESSION_EXPIRY_HOURS', 24);
-    return this.sessionRepository.createSession({
+    const session = await this.sessionRepository.createSession({
       ...input,
       playerMode: input.playerMode ?? PlayerMode.SINGLE,
       externalParticipantId,
       sessionExpiryHours: expiryHours,
     });
+    const view = await this.sessionRepository.getSessionView(session.id, locale);
+    return ClientViewMapper.toGameSessionResponse(view ?? session);
   }
 
-  async getSession(sessionId: string, externalParticipantId: string) {
+  async getSession(sessionId: string, externalParticipantId: string, locale = 'en') {
     const session = await this.sessionRepository.getSessionForParticipant(
       sessionId,
       externalParticipantId,
+      locale,
     );
     if (!session) {
       throw new DomainException(ErrorCode.GAME_SESSION_NOT_FOUND, 'Game session not found.');
     }
-    return session;
+    return ClientViewMapper.toGameSessionResponse(session);
   }
 
   async searchPlayers(
@@ -54,8 +59,17 @@ export class GameRuntimeService {
     page: number,
     limit: number,
     slotCode?: string,
+    locale = 'en',
   ) {
-    const session = await this.getSession(sessionId, externalParticipantId);
+    const session = await this.sessionRepository.getSessionForParticipant(
+      sessionId,
+      externalParticipantId,
+      locale,
+    );
+    if (!session) {
+      throw new DomainException(ErrorCode.GAME_SESSION_NOT_FOUND, 'Game session not found.');
+    }
+
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
     let participant = session.participants.find(
       (p) => p.externalParticipantId === externalParticipantId,
@@ -77,11 +91,16 @@ export class GameRuntimeService {
             .map((selection) => selection.playerId);
 
     const scopeResolver = this.scopeRegistry.get(definition.scope);
-    return scopeResolver.searchEligiblePlayers(
+    const result = await scopeResolver.searchEligiblePlayers(
       { code: definition.scope, params: definition.scopeParams },
       { query, page, limit, excludePlayerIds, slotCode },
       { sessionId, definition, scopeParams: slotCode ? { slotCode } : undefined },
     );
+
+    return {
+      ...result,
+      items: result.items.map((player) => ClientViewMapper.toEligiblePlayerResponse(player)),
+    };
   }
 
   async processAction(
@@ -93,9 +112,17 @@ export class GameRuntimeService {
       playerId: string;
       slotCode?: string;
     },
+    locale = 'en',
   ) {
-    const session = await this.getSession(sessionId, externalParticipantId);
-    const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const session = await this.sessionRepository.getSessionForParticipant(
+      sessionId,
+      externalParticipantId,
+      locale,
+    );
+    if (!session) {
+      throw new DomainException(ErrorCode.GAME_SESSION_NOT_FOUND, 'Game session not found.');
+    }
+
     const participant = session.participants.find(
       (p) => p.externalParticipantId === externalParticipantId,
     );
@@ -103,8 +130,7 @@ export class GameRuntimeService {
       throw new DomainException(ErrorCode.INVALID_GAME_ACTION, 'Participant not found.');
     }
 
-    const handler = this.gameFamilyRegistry.get(definition.family);
-    return handler.processAction({
+    const result = await this.sessionOrchestrator.processSelectPlayerAction({
       sessionId,
       participantId: participant.id,
       actionId: input.actionId,
@@ -114,29 +140,35 @@ export class GameRuntimeService {
         ? { playerId: input.playerId, slotCode: input.slotCode }
         : { playerId: input.playerId },
     });
+
+    return ClientViewMapper.toActionResponse(result);
   }
 
-  getEvents(sessionId: string, externalParticipantId: string) {
-    return this.getSession(sessionId, externalParticipantId).then(() =>
+  getEvents(sessionId: string, externalParticipantId: string, locale = 'en') {
+    return this.getSession(sessionId, externalParticipantId, locale).then(() =>
       this.sessionRepository.getEvents(sessionId),
     );
   }
 
-  async getResult(sessionId: string, externalParticipantId: string) {
-    await this.getSession(sessionId, externalParticipantId);
-    const result = await this.sessionRepository.getResult(sessionId, externalParticipantId);
+  async getResult(sessionId: string, externalParticipantId: string, locale = 'en') {
+    await this.getSession(sessionId, externalParticipantId, locale);
+    const result = await this.sessionRepository.getResult(sessionId, externalParticipantId, locale);
     if (!result) {
       throw new DomainException(ErrorCode.RESULT_NOT_AVAILABLE, 'Result is not available yet.');
     }
-    return result;
+    const session = await this.sessionRepository.getSession(sessionId, locale);
+    const definition = parseGameDefinitionConfig(session!.definitionSnapshot);
+    return ClientViewMapper.toGameResultResponse(result, definition.family);
   }
 
-  async getResults(sessionId: string, externalParticipantId: string) {
-    await this.getSession(sessionId, externalParticipantId);
-    const results = await this.sessionRepository.getResults(sessionId, externalParticipantId);
+  async getResults(sessionId: string, externalParticipantId: string, locale = 'en') {
+    await this.getSession(sessionId, externalParticipantId, locale);
+    const results = await this.sessionRepository.getResults(sessionId, externalParticipantId, locale);
     if (results.length === 0) {
       throw new DomainException(ErrorCode.RESULT_NOT_AVAILABLE, 'Result is not available yet.');
     }
-    return results;
+    const session = await this.sessionRepository.getSession(sessionId, locale);
+    const definition = parseGameDefinitionConfig(session!.definitionSnapshot);
+    return results.map((result) => ClientViewMapper.toGameResultResponse(result, definition.family));
   }
 }

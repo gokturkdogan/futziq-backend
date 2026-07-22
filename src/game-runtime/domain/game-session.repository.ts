@@ -1,8 +1,4 @@
 import { GameDefinitionConfig } from '../../game-engine/contracts/game-types';
-import {
-  ProcessActionInput,
-  ProcessActionResult,
-} from '../../game-engine/contracts/game-family-handler';
 import { PlayerMode } from './session-runtime';
 import { DraftLineupSlotView } from './draft-lineup';
 import { LineupTemplate, ObjectiveType } from '../../game-engine/contracts/game-types';
@@ -81,53 +77,12 @@ export interface GameResultView {
 
 export interface GameSessionRepository {
   createSession(input: CreateSessionInput): Promise<GameSessionView>;
-  getSession(sessionId: string): Promise<GameSessionView | null>;
+  getSession(sessionId: string, locale?: string): Promise<GameSessionView | null>;
   getSessionForParticipant(
     sessionId: string,
     externalParticipantId: string,
+    locale?: string,
   ): Promise<GameSessionView | null>;
-  processSelectPlayerAction(
-    input: ProcessActionInput,
-    hooks: {
-      validateAndResolve: (ctx: {
-        sessionId: string;
-        participantId: string;
-        playerId: string;
-        slotCode?: string;
-        definition: GameDefinitionConfig;
-        selectedPlayerIds: string[];
-        existingSelections: Array<{
-          playerId: string;
-          selectionOrder: number;
-          slotCode?: string | null;
-          metricValue: number;
-          playerSnapshot: Record<string, unknown>;
-        }>;
-      }) => Promise<{ metricValue: number; playerSnapshot: Record<string, unknown> }>;
-      onComplete: (ctx: {
-        targetValue: number;
-        aggregateValue: number;
-        definition: GameDefinitionConfig;
-        selections: Array<{
-          playerId: string;
-          selectionOrder: number;
-          slotCode?: string | null;
-          metricValue: number;
-          playerSnapshot: Record<string, unknown>;
-        }>;
-        startedAt: Date | null;
-        completedAt: Date;
-      }) => Promise<{
-        targetValue: number;
-        aggregateValue: number;
-        absoluteDifference: number;
-        exactHit: boolean;
-        performanceRating: string;
-        resultPayload: Record<string, unknown>;
-      }>;
-      shouldReveal: (definition: GameDefinitionConfig, phase: 'selection' | 'complete') => boolean;
-    },
-  ): Promise<ProcessActionResult>;
   getEvents(sessionId: string): Promise<
     Array<{
       id: string;
@@ -138,10 +93,24 @@ export interface GameSessionRepository {
       createdAt: string;
     }>
   >;
-  getResult(sessionId: string, externalParticipantId: string): Promise<GameResultView | null>;
-  getResults(sessionId: string, externalParticipantId: string): Promise<GameResultView[]>;
+  getResult(
+    sessionId: string,
+    externalParticipantId: string,
+    locale?: string,
+  ): Promise<GameResultView | null>;
+  getResults(
+    sessionId: string,
+    externalParticipantId: string,
+    locale?: string,
+  ): Promise<GameResultView[]>;
   getPlayerSnapshot(playerId: string): Promise<Record<string, unknown> | null>;
   isPlayerSelectedInSession(sessionId: string, playerId: string): Promise<boolean>;
+  buildActionState(
+    sessionId: string,
+    participantId: string,
+    locale?: string,
+  ): Promise<import('../../game-engine/contracts/game-family-handler').GameSessionState>;
+  getSessionView(sessionId: string, locale?: string): Promise<GameSessionView | null>;
 }
 
 export const GAME_SESSION_REPOSITORY = Symbol('GAME_SESSION_REPOSITORY');
