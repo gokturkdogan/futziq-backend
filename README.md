@@ -88,11 +88,14 @@ npm run db:seed
 
 ### Vercel deployment
 
-This backend uses a single serverless function (`api/index.ts`) that boots the same Nest app as local dev, including `/docs` and `/swagger`. Commit `vercel.json` and redeploy after pulling.
+Uses [Vercel zero-config NestJS](https://vercel.com/docs/frameworks/backend/nestjs): entrypoint `src/main.ts`, build via `npm run vercel-build`. `/docs` and `/swagger` work after deploy.
 
-Required Vercel env vars: `DATABASE_URL`, `CORS_ORIGINS` (and optional rate-limit vars).
+**Vercel dashboard settings:**
+- Framework Preset: **NestJS** (or auto-detect)
+- Output Directory: **empty** (do not set `public`)
+- Build Command: leave empty (uses `vercel.json`)
 
-Build command (auto from `vercel.json`): `npm run build` → runs `prisma generate && nest build`.
+Required env vars: `DATABASE_URL`, `CORS_ORIGINS`
 
 **Client integration:**
 

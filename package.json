@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "prisma generate && nest build",
-    "vercel-build": "prisma generate && nest build && node -e \"const fs=require('fs'); if(!fs.existsSync('dist/vercel.js')) { console.error('Missing dist/vercel.js'); process.exit(1); } if(!fs.existsSync('dist/docs/overview.md')) { console.error('Missing dist/docs assets'); process.exit(1); } console.log('Vercel build OK');\"",
+    "vercel-build": "prisma generate && nest build && node -e \"const fs=require('fs'); if(!fs.existsSync('dist/docs/overview.md')) { console.error('Missing dist/docs assets'); process.exit(1); } console.log('Vercel build OK');\"",
     "postinstall": "prisma generate",
     "start": "nest start",
     "start:dev": "nest start --watch",
