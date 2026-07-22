@@ -88,12 +88,12 @@ npm run db:seed
 
 ### Vercel deployment
 
-Uses [Vercel zero-config NestJS](https://vercel.com/docs/frameworks/backend/nestjs): entrypoint `src/main.ts`, build via `npm run vercel-build`. `/docs` and `/swagger` work after deploy.
+Serverless entrypoint: `api/index.js` → boots `dist/create-app.js` (same app as local, including `/docs` and `/swagger`).
 
-**Vercel dashboard settings:**
-- Framework Preset: **NestJS** (or auto-detect)
-- Output Directory: **empty** (do not set `public`)
-- Build Command: leave empty (uses `vercel.json`)
+**Vercel dashboard (Settings → General) — kritik:**
+- Framework Preset: **Other**
+- **Output Directory: boş bırak** (`public` yazılıysa sil, yoksa deploy patlar)
+- Build Command: boş ( `vercel.json` kullanır)
 
 Required env vars: `DATABASE_URL`, `CORS_ORIGINS`
 
