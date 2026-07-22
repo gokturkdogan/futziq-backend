@@ -86,6 +86,14 @@ npm run db:seed
 | Swagger UI | http://localhost:3000/swagger |
 | OpenAPI JSON | http://localhost:3000/swagger-json |
 
+### Vercel deployment
+
+This backend uses a single serverless function (`api/index.ts`) that boots the same Nest app as local dev, including `/docs` and `/swagger`. Commit `vercel.json` and redeploy after pulling.
+
+Required Vercel env vars: `DATABASE_URL`, `CORS_ORIGINS` (and optional rate-limit vars).
+
+Build command (auto from `vercel.json`): `npm run build` → runs `prisma generate && nest build`.
+
 **Client integration:**
 
 | Platform | Guide |

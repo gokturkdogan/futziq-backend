@@ -221,11 +221,25 @@ export class DocsService {
 
   private resolveDocsDir(): string {
     const candidates = [
+      __dirname,
       join(__dirname, '..', '..', 'docs'),
-      join(process.cwd(), 'docs'),
       join(process.cwd(), 'dist', 'docs'),
+      join(process.cwd(), 'docs'),
     ];
-    const found = candidates.find((dir) => existsSync(dir));
-    return found ?? candidates[0];
+
+    const found = candidates.find((dir) => this.isDocsContentDir(dir));
+    return found ?? __dirname;
+  }
+
+  private isDocsContentDir(dir: string): boolean {
+    if (!existsSync(dir)) {
+      return false;
+    }
+
+    return (
+      existsSync(join(dir, '_manifest.json')) ||
+      existsSync(join(dir, 'overview.md')) ||
+      readdirSync(dir).some((name) => name.endsWith('.md') && !name.startsWith('_'))
+    );
   }
 }

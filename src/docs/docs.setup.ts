@@ -12,6 +12,15 @@ const sendHtml = (res: Response, html: string): void => {
 export const setupDocsRoutes = (expressApp: Express, logger: Logger): void => {
   const docsService = new DocsService();
   const docsPath = '/docs';
+  const docCount = docsService.listDocs().length;
+
+  if (docCount === 0) {
+    logger.warn(
+      `No markdown docs found under ${docsService.getDocsDir()}. Check that nest build copied docs assets to dist/docs.`,
+    );
+  } else {
+    logger.log(`Loaded ${docCount} documentation pages from ${docsService.getDocsDir()}`);
+  }
 
   expressApp.get(docsPath, (_req: Request, res: Response) => {
     const entries = docsService.listDocs();
