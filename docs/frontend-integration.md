@@ -104,6 +104,7 @@ Aktif oyun kategorilerini listeler. Modlar bu endpoint'te dönmez.
     "code": "TARGET_HUNT",
     "title": "Hedef Avı",
     "description": "Hedef değere en yakın toplamı oluşturmak için oyuncu seç.",
+    "imageUrl": "/images/families/target-hunt.png",
     "sortOrder": 1
   },
   {
@@ -111,6 +112,7 @@ Aktif oyun kategorilerini listeler. Modlar bu endpoint'te dönmez.
     "code": "DRAFT",
     "title": "Kadro Kur",
     "description": "Formasyona uygun slotlara oyuncu yerleştirerek kadronu oluştur.",
+    "imageUrl": "/images/families/draft.png",
     "sortOrder": 2
   }
 ]
@@ -126,10 +128,13 @@ Family detayı. Her family altında `games` listesi döner. Scope gerektiren oyu
 {
   "code": "TARGET_HUNT",
   "title": "Hedef Avı",
+  "imageUrl": "/images/families/target-hunt.png",
   "games": [
     {
       "code": "GOALS",
       "title": "Gol",
+      "imageUrl": "/images/games/goals.png",
+      "bannerImageUrl": "/images/games/banners/goals.png",
       "requiresScope": true,
       "scopes": [
         { "code": "CAREER", "title": "Kariyer" },
@@ -158,6 +163,8 @@ Family detayı. Her family altında `games` listesi döner. Scope gerektiren oyu
     {
       "code": "TALLEST_XI",
       "title": "En Uzun XI",
+      "imageUrl": "/images/games/tallest-xi.png",
+      "bannerImageUrl": "/images/games/banners/tallest-xi.png",
       "requiresScope": false,
       "scopes": null
     }

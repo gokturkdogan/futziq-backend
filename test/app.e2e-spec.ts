@@ -30,6 +30,7 @@ describe('Target Hunt E2E', () => {
       .expect(200);
 
     expect(familiesRes.body.length).toBeGreaterThanOrEqual(2);
+    expect(familiesRes.body[0].imageUrl).toBeTruthy();
 
     const detailRes = await request(app.getHttpServer())
       .get('/api/v1/game-families/TARGET_HUNT')
@@ -39,6 +40,8 @@ describe('Target Hunt E2E', () => {
     expect(detailRes.body.games.length).toBeGreaterThan(0);
     expect(detailRes.body.games[0].requiresScope).toBe(true);
     expect(detailRes.body.games[0].scopes?.length).toBeGreaterThan(0);
+    expect(detailRes.body.games[0].imageUrl).toBeTruthy();
+    expect(detailRes.body.games[0].bannerImageUrl).toBeTruthy();
 
     const draftRes = await request(app.getHttpServer())
       .get('/api/v1/game-families/DRAFT')

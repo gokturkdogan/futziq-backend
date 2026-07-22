@@ -3,6 +3,7 @@ export interface GameScopeSummaryView {
   code: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
   sortOrder: number;
 }
 
@@ -11,6 +12,8 @@ export interface GameSummaryView {
   code: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
+  bannerImageUrl: string | null;
   sortOrder: number;
   requiresScope: boolean;
   scopes: GameScopeSummaryView[] | null;
@@ -21,6 +24,8 @@ export interface GameFamilySummaryView {
   code: string;
   title: string;
   description: string | null;
+  imageUrl: string | null;
+  logoUrl: string | null;
   sortOrder: number;
 }
 

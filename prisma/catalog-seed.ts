@@ -15,12 +15,14 @@ export const GAME_FAMILIES = [
     code: GameFamily.TARGET_HUNT,
     title: 'Hedef Avı',
     description: 'Hedef değere en yakın toplamı oluşturmak için oyuncu seç.',
+    imageUrl: '/images/families/target-hunt.png',
     sortOrder: 1,
   },
   {
     code: GameFamily.DRAFT,
     title: 'Kadro Kur',
     description: 'Formasyona uygun slotlara oyuncu yerleştirerek kadronu oluştur.',
+    imageUrl: '/images/families/draft.png',
     sortOrder: 2,
   },
 ] as const;
@@ -59,12 +61,12 @@ export const GAME_SCOPES = [
 ] as const;
 
 export const TARGET_HUNT_GAMES = [
-  { code: 'GOALS', title: 'Gol', sortOrder: 1 },
-  { code: 'ASSISTS', title: 'Asist', sortOrder: 2 },
-  { code: 'APPEARANCES', title: 'Oynanan Maç', sortOrder: 3 },
-  { code: 'MINUTES', title: 'Oynanan Dakika', sortOrder: 4 },
-  { code: 'YELLOW_CARDS', title: 'Sarı Kart', sortOrder: 5 },
-  { code: 'RED_CARDS', title: 'Kırmızı Kart', sortOrder: 6 },
+  { code: 'GOALS', title: 'Gol', sortOrder: 1, imageUrl: '/images/games/goals.png', bannerImageUrl: '/images/games/banners/goals.png' },
+  { code: 'ASSISTS', title: 'Asist', sortOrder: 2, imageUrl: '/images/games/assists.png', bannerImageUrl: '/images/games/banners/assists.png' },
+  { code: 'APPEARANCES', title: 'Oynanan Maç', sortOrder: 3, imageUrl: '/images/games/appearances.png', bannerImageUrl: '/images/games/banners/appearances.png' },
+  { code: 'MINUTES', title: 'Oynanan Dakika', sortOrder: 4, imageUrl: '/images/games/minutes.png', bannerImageUrl: '/images/games/banners/minutes.png' },
+  { code: 'YELLOW_CARDS', title: 'Sarı Kart', sortOrder: 5, imageUrl: '/images/games/yellow-cards.png', bannerImageUrl: '/images/games/banners/yellow-cards.png' },
+  { code: 'RED_CARDS', title: 'Kırmızı Kart', sortOrder: 6, imageUrl: '/images/games/red-cards.png', bannerImageUrl: '/images/games/banners/red-cards.png' },
 ] as const;
 
 export type TargetHuntGameCode = (typeof TARGET_HUNT_GAMES)[number]['code'];
@@ -176,11 +178,15 @@ export const DRAFT_GAMES = [
     title: 'En Uzun XI',
     description: '4-2-3-1 diziliminde boy toplamı en yüksek ilk 11i kur.',
     objective: ObjectiveType.MAX,
+    imageUrl: '/images/games/tallest-xi.png',
+    bannerImageUrl: '/images/games/banners/tallest-xi.png',
   },
   {
     code: 'SHORTEST_XI',
     title: 'En Kısa XI',
     description: '4-2-3-1 diziliminde boy toplamı en düşük ilk 11i kur.',
     objective: ObjectiveType.MIN,
+    imageUrl: '/images/games/shortest-xi.png',
+    bannerImageUrl: '/images/games/banners/shortest-xi.png',
   },
 ] as const;

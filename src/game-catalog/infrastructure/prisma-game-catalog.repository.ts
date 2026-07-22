@@ -20,6 +20,8 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
         code: true,
         title: true,
         description: true,
+        imageUrl: true,
+        logoUrl: true,
         sortOrder: true,
       },
     });
@@ -54,12 +56,16 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
       code: family.code,
       title: family.title,
       description: family.description,
+      imageUrl: family.imageUrl,
+      logoUrl: family.logoUrl,
       sortOrder: family.sortOrder,
       games: family.games.map((game) => ({
         id: game.id,
         code: game.code,
         title: game.title,
         description: game.description,
+        imageUrl: game.imageUrl,
+        bannerImageUrl: game.bannerImageUrl,
         sortOrder: game.sortOrder,
         requiresScope: game.requiresScope,
         scopes: game.requiresScope
@@ -68,6 +74,7 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
               code: rule.scope.code,
               title: rule.scope.title,
               description: rule.scope.description,
+              imageUrl: rule.scope.imageUrl,
               sortOrder: rule.sortOrder,
             }))
           : null,
