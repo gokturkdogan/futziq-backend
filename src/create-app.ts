@@ -1,9 +1,10 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConsoleLogger, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import type { Express, Request, Response } from 'express';
-import { json } from 'express';
+import express, { json } from 'express';
 import type { INestApplication } from '@nestjs/common';
 
 import { AppModule } from './app.module';
@@ -45,9 +46,24 @@ const buildSwaggerHtml = (title: string, openApiJsonPath: string): string => `<!
 </html>
 `;
 
-export const createApp = async (): Promise<INestApplication> => {
+/**
+ * Shared bootstrap for `main.ts` (listen) and `serverless.ts` (Vercel).
+ * Swagger/docs routes are mounted on Express before `init()` — required for
+ * Vercel's rewrite-all-to-/api serverless model (same pattern as lineup-api).
+ */
+export const createApp = async (expressApp?: Express): Promise<INestApplication> => {
+  const isServerless = Boolean(process.env.VERCEL);
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+
+  const app = expressApp
+    ? await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
+        bufferLogs: !isServerless,
+      })
+    : await NestFactory.create(AppModule, { bufferLogs: !isServerless });
+
+  if (isServerless) {
+    app.useLogger(new ConsoleLogger());
+  }
 
   app.use(
     helmet({
@@ -57,12 +73,12 @@ export const createApp = async (): Promise<INestApplication> => {
           baseUri: ["'self'"],
           fontSrc: ["'self'", 'https:', 'data:'],
           imgSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
-          scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://vercel.live'],
           scriptSrcAttr: ["'none'"],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
           objectSrc: ["'none'"],
-          connectSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-          frameSrc: ["'self'", 'https://embed.figma.com', 'https://www.figma.com'],
+          connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://vercel.live'],
+          frameSrc: ["'self'", 'https://embed.figma.com', 'https://www.figma.com', 'https://vercel.live'],
         },
       },
       crossOriginEmbedderPolicy: false,
@@ -116,9 +132,7 @@ export const createApp = async (): Promise<INestApplication> => {
     extraModels: [ErrorResponseDto, TargetHuntResultResponseDto, DraftResultResponseDto],
   });
 
-  await app.init();
-
-  const expressApp = app.getHttpAdapter().getInstance() as Express;
+  const expressInstance = app.getHttpAdapter().getInstance() as Express;
   const swaggerPath = '/swagger';
   const swaggerJsonPath = '/swagger-json';
   const swaggerHtml = buildSwaggerHtml('Futz IQ API Docs', swaggerJsonPath);
@@ -132,21 +146,23 @@ export const createApp = async (): Promise<INestApplication> => {
     res.send(swaggerHtml);
   };
 
-  expressApp.get(swaggerJsonPath, serveSwaggerJson);
-  expressApp.get(swaggerPath, serveSwaggerHtml);
-  expressApp.get('/api/docs-json', serveSwaggerJson);
-  expressApp.get('/api/docs', serveSwaggerHtml);
-  expressApp.get('/api/docs/', (_req: Request, res: Response) => {
+  expressInstance.get(swaggerJsonPath, serveSwaggerJson);
+  expressInstance.get(swaggerPath, serveSwaggerHtml);
+  expressInstance.get('/api/docs-json', serveSwaggerJson);
+  expressInstance.get('/api/docs', serveSwaggerHtml);
+  expressInstance.get('/api/docs/', (_req: Request, res: Response) => {
     res.redirect(301, swaggerPath);
   });
-  expressApp.get('/favicon.ico', (_req: Request, res: Response) => {
+  expressInstance.get('/favicon.ico', (_req: Request, res: Response) => {
     res.redirect(302, `${SWAGGER_CDN}/favicon-32x32.png`);
   });
 
-  setupDocsRoutes(expressApp, logger);
+  setupDocsRoutes(expressInstance, logger);
 
   logger.log(`Swagger docs available at ${swaggerPath} (legacy: /api/docs)`);
   logger.log(`OpenAPI JSON available at ${swaggerJsonPath} (legacy: /api/docs-json)`);
 
   return app;
 };
+
+export const createExpressApp = (): Express => express();
