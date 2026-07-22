@@ -4,7 +4,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import type { Express, Request, Response } from 'express';
-import express, { json } from 'express';
+import express = require('express');
 import type { INestApplication } from '@nestjs/common';
 
 import { AppModule } from './app.module';
@@ -48,8 +48,8 @@ const buildSwaggerHtml = (title: string, openApiJsonPath: string): string => `<!
 
 /**
  * Shared bootstrap for `main.ts` (listen) and `serverless.ts` (Vercel).
- * Swagger/docs routes are mounted on Express before `init()` — required for
- * Vercel's rewrite-all-to-/api serverless model (same pattern as lineup-api).
+ * When `expressApp` is passed (serverless), routes mount on that instance before
+ * `init()` — same pattern as lineup-api.
  */
 export const createApp = async (expressApp?: Express): Promise<INestApplication> => {
   const isServerless = Boolean(process.env.VERCEL);
@@ -84,7 +84,6 @@ export const createApp = async (expressApp?: Express): Promise<INestApplication>
       crossOriginEmbedderPolicy: false,
     }),
   );
-  app.use(json({ limit: '1mb' }));
 
   app.enableCors({
     origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3000'],
