@@ -1,0 +1,30 @@
+{
+  "families": {
+    "TARGET_HUNT": {
+      "imageUrl": null,
+      "logoUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784710792/image_eps22v.png"
+    },
+    "DRAFT": {
+      "imageUrl": null,
+      "logoUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784710962/image_zamkgl.png"
+    }
+  },
+  "games": {},
+  "scopes": {
+    "CAREER": {
+      "imageUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784709879/image_i4dt2z.png"
+    },
+    "CLUB": {
+      "imageUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784709681/image_dietim.png"
+    },
+    "NATIONAL_TEAM": {
+      "imageUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784709162/image_g2fkdr.png"
+    },
+    "WORLD_CUP": {
+      "imageUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784709768/image_gdpy7r.png"
+    },
+    "CHAMPIONS_LEAGUE": {
+      "imageUrl": "https://res.cloudinary.com/iqk4xho9/image/upload/v1784709444/image_ruk07e.png"
+    }
+  }
+}

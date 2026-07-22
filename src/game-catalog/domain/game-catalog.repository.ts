@@ -44,8 +44,8 @@ export interface ResolvedPlayConfig {
 }
 
 export interface GameCatalogRepository {
-  findAllActiveFamilies(): Promise<GameFamilySummaryView[]>;
-  findFamilyByCode(code: string): Promise<GameFamilyDetailView | null>;
+  findAllActiveFamilies(locale: string): Promise<GameFamilySummaryView[]>;
+  findFamilyByCode(code: string, locale: string): Promise<GameFamilyDetailView | null>;
   resolvePlayConfig(input: {
     familyCode: string;
     gameCode: string;

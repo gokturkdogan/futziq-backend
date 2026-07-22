@@ -1,13 +1,15 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { FootballDataModule } from './football-data/football-data.module';
 import { GameCatalogModule } from './game-catalog/game-catalog.module';
 import { GameEngineModule } from './game-engine/game-engine.module';
 import { GameRuntimeModule } from './game-runtime/game-runtime.module';
+import { MetaModule } from './meta/meta.module';
 import { HealthController } from './health/health.controller';
 import { GlobalExceptionFilter } from './common/errors/global-exception.filter';
+import { LocaleInterceptor } from './common/locale/locale.interceptor';
 import { TraceIdMiddleware } from './common/logging/trace-id.middleware';
 
 @Module({
@@ -23,11 +25,13 @@ import { TraceIdMiddleware } from './common/logging/trace-id.middleware';
     GameCatalogModule,
     GameEngineModule,
     GameRuntimeModule,
+    MetaModule,
   ],
   controllers: [HealthController],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: LocaleInterceptor },
   ],
 })
 export class AppModule implements NestModule {

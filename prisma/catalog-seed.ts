@@ -9,64 +9,147 @@ import {
   ObjectiveType,
   TargetGeneratorStrategy,
 } from '../src/game-engine/contracts/game-types';
+import type { SupportedLocale } from '../src/common/locale/locale.constants';
+
+type LocalizedText = Record<SupportedLocale, { title: string; description: string }>;
 
 export const GAME_FAMILIES = [
   {
     code: GameFamily.TARGET_HUNT,
-    title: 'Hedef Avı',
-    description: 'Hedef değere en yakın toplamı oluşturmak için oyuncu seç.',
     imageUrl: '/images/families/target-hunt.png',
     sortOrder: 1,
+    translations: {
+      tr: {
+        title: 'Hedef Avı',
+        description: 'Hedef değere en yakın toplamı oluşturmak için oyuncu seç.',
+      },
+      en: {
+        title: 'Target Hunt',
+        description: 'Pick players to build a total closest to the target.',
+      },
+    },
   },
   {
     code: GameFamily.DRAFT,
-    title: 'Kadro Kur',
-    description: 'Formasyona uygun slotlara oyuncu yerleştirerek kadronu oluştur.',
     imageUrl: '/images/families/draft.png',
     sortOrder: 2,
+    translations: {
+      tr: {
+        title: 'Kadro Kur',
+        description: 'Formasyona uygun slotlara oyuncu yerleştirerek kadronu oluştur.',
+      },
+      en: {
+        title: 'Squad Builder',
+        description: 'Build your squad by placing players into formation slots.',
+      },
+    },
   },
 ] as const;
 
 export const GAME_SCOPES = [
   {
     code: 'CAREER',
-    title: 'Kariyer',
-    description: 'Tüm kariyer istatistikleri.',
     sortOrder: 1,
+    translations: {
+      tr: { title: 'Kariyer', description: 'Tüm kariyer istatistikleri.' },
+      en: { title: 'Career', description: 'All career statistics.' },
+    },
   },
   {
     code: 'CLUB',
-    title: 'Kulüp',
-    description: 'Kulüp kariyer istatistikleri.',
     sortOrder: 2,
+    translations: {
+      tr: { title: 'Kulüp', description: 'Kulüp kariyer istatistikleri.' },
+      en: { title: 'Club', description: 'Club career statistics.' },
+    },
   },
   {
     code: 'NATIONAL_TEAM',
-    title: 'Milli Takım',
-    description: 'Milli takım kariyer istatistikleri.',
     sortOrder: 3,
+    translations: {
+      tr: { title: 'Milli Takım', description: 'Milli takım kariyer istatistikleri.' },
+      en: { title: 'National Team', description: 'National team career statistics.' },
+    },
   },
   {
     code: 'WORLD_CUP',
-    title: 'Dünya Kupası',
-    description: 'Dünya Kupası istatistikleri.',
     sortOrder: 4,
+    translations: {
+      tr: { title: 'Dünya Kupası', description: 'Dünya Kupası istatistikleri.' },
+      en: { title: 'World Cup', description: 'World Cup statistics.' },
+    },
   },
   {
     code: 'CHAMPIONS_LEAGUE',
-    title: 'Şampiyonlar Ligi',
-    description: 'UEFA Şampiyonlar Ligi istatistikleri.',
     sortOrder: 5,
+    translations: {
+      tr: { title: 'Şampiyonlar Ligi', description: 'UEFA Şampiyonlar Ligi istatistikleri.' },
+      en: { title: 'Champions League', description: 'UEFA Champions League statistics.' },
+    },
   },
 ] as const;
 
 export const TARGET_HUNT_GAMES = [
-  { code: 'GOALS', title: 'Gol', sortOrder: 1, imageUrl: '/images/games/goals.png', bannerImageUrl: '/images/games/banners/goals.png' },
-  { code: 'ASSISTS', title: 'Asist', sortOrder: 2, imageUrl: '/images/games/assists.png', bannerImageUrl: '/images/games/banners/assists.png' },
-  { code: 'APPEARANCES', title: 'Oynanan Maç', sortOrder: 3, imageUrl: '/images/games/appearances.png', bannerImageUrl: '/images/games/banners/appearances.png' },
-  { code: 'MINUTES', title: 'Oynanan Dakika', sortOrder: 4, imageUrl: '/images/games/minutes.png', bannerImageUrl: '/images/games/banners/minutes.png' },
-  { code: 'YELLOW_CARDS', title: 'Sarı Kart', sortOrder: 5, imageUrl: '/images/games/yellow-cards.png', bannerImageUrl: '/images/games/banners/yellow-cards.png' },
-  { code: 'RED_CARDS', title: 'Kırmızı Kart', sortOrder: 6, imageUrl: '/images/games/red-cards.png', bannerImageUrl: '/images/games/banners/red-cards.png' },
+  {
+    code: 'GOALS',
+    sortOrder: 1,
+    imageUrl: '/images/games/goals.png',
+    bannerImageUrl: '/images/games/banners/goals.png',
+    translations: {
+      tr: { title: 'Gol', description: 'Gol hedef avı modu.' },
+      en: { title: 'Goals', description: 'Goals target hunt mode.' },
+    },
+  },
+  {
+    code: 'ASSISTS',
+    sortOrder: 2,
+    imageUrl: '/images/games/assists.png',
+    bannerImageUrl: '/images/games/banners/assists.png',
+    translations: {
+      tr: { title: 'Asist', description: 'Asist hedef avı modu.' },
+      en: { title: 'Assists', description: 'Assists target hunt mode.' },
+    },
+  },
+  {
+    code: 'APPEARANCES',
+    sortOrder: 3,
+    imageUrl: '/images/games/appearances.png',
+    bannerImageUrl: '/images/games/banners/appearances.png',
+    translations: {
+      tr: { title: 'Oynanan Maç', description: 'Oynanan maç hedef avı modu.' },
+      en: { title: 'Appearances', description: 'Appearances target hunt mode.' },
+    },
+  },
+  {
+    code: 'MINUTES',
+    sortOrder: 4,
+    imageUrl: '/images/games/minutes.png',
+    bannerImageUrl: '/images/games/banners/minutes.png',
+    translations: {
+      tr: { title: 'Oynanan Dakika', description: 'Oynanan dakika hedef avı modu.' },
+      en: { title: 'Minutes Played', description: 'Minutes played target hunt mode.' },
+    },
+  },
+  {
+    code: 'YELLOW_CARDS',
+    sortOrder: 5,
+    imageUrl: '/images/games/yellow-cards.png',
+    bannerImageUrl: '/images/games/banners/yellow-cards.png',
+    translations: {
+      tr: { title: 'Sarı Kart', description: 'Sarı kart hedef avı modu.' },
+      en: { title: 'Yellow Cards', description: 'Yellow cards target hunt mode.' },
+    },
+  },
+  {
+    code: 'RED_CARDS',
+    sortOrder: 6,
+    imageUrl: '/images/games/red-cards.png',
+    bannerImageUrl: '/images/games/banners/red-cards.png',
+    translations: {
+      tr: { title: 'Kırmızı Kart', description: 'Kırmızı kart hedef avı modu.' },
+      en: { title: 'Red Cards', description: 'Red cards target hunt mode.' },
+    },
+  },
 ] as const;
 
 export type TargetHuntGameCode = (typeof TARGET_HUNT_GAMES)[number]['code'];
@@ -175,18 +258,38 @@ export function buildDraftGameConfig(objective: ObjectiveType): GameDefinitionCo
 export const DRAFT_GAMES = [
   {
     code: 'TALLEST_XI',
-    title: 'En Uzun XI',
-    description: '4-2-3-1 diziliminde boy toplamı en yüksek ilk 11i kur.',
     objective: ObjectiveType.MAX,
     imageUrl: '/images/games/tallest-xi.png',
     bannerImageUrl: '/images/games/banners/tallest-xi.png',
+    translations: {
+      tr: {
+        title: 'En Uzun XI',
+        description: '4-2-3-1 diziliminde boy toplamı en yüksek ilk 11i kur.',
+      },
+      en: {
+        title: 'Tallest XI',
+        description: 'Build the tallest starting XI in a 4-2-3-1 formation.',
+      },
+    },
   },
   {
     code: 'SHORTEST_XI',
-    title: 'En Kısa XI',
-    description: '4-2-3-1 diziliminde boy toplamı en düşük ilk 11i kur.',
     objective: ObjectiveType.MIN,
     imageUrl: '/images/games/shortest-xi.png',
     bannerImageUrl: '/images/games/banners/shortest-xi.png',
+    translations: {
+      tr: {
+        title: 'En Kısa XI',
+        description: '4-2-3-1 diziliminde boy toplamı en düşük ilk 11i kur.',
+      },
+      en: {
+        title: 'Shortest XI',
+        description: 'Build the shortest starting XI in a 4-2-3-1 formation.',
+      },
+    },
   },
 ] as const;
+
+export function getDefaultLocaleText(translations: LocalizedText, locale: SupportedLocale = 'tr') {
+  return translations[locale];
+}

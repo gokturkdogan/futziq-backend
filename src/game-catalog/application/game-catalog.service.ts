@@ -11,12 +11,12 @@ export class GameCatalogService {
     private readonly catalogRepository: GameCatalogRepository,
   ) {}
 
-  listActiveFamilies() {
-    return this.catalogRepository.findAllActiveFamilies();
+  listActiveFamilies(locale: string) {
+    return this.catalogRepository.findAllActiveFamilies(locale);
   }
 
-  getFamilyByCode(code: string) {
-    return this.catalogRepository.findFamilyByCode(code);
+  getFamilyByCode(code: string, locale: string) {
+    return this.catalogRepository.findFamilyByCode(code, locale);
   }
 
   resolvePlayConfig(input: { familyCode: string; gameCode: string; scopeCode?: string }) {

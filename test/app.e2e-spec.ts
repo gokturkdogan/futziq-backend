@@ -52,6 +52,29 @@ describe('Target Hunt E2E', () => {
     expect(draftRes.body.games[0].scopes).toBeNull();
   });
 
+  it('returns localized catalog titles via Accept-Language', async () => {
+    const trRes = await request(app.getHttpServer())
+      .get('/api/v1/game-families/TARGET_HUNT')
+      .set('Accept-Language', 'tr')
+      .expect(200);
+
+    const enRes = await request(app.getHttpServer())
+      .get('/api/v1/game-families/TARGET_HUNT')
+      .set('Accept-Language', 'en')
+      .expect(200);
+
+    expect(trRes.body.title).toBe('Hedef Avı');
+    expect(enRes.body.title).toBe('Target Hunt');
+    expect(enRes.body.games[0].title).toBe('Goals');
+  });
+
+  it('exposes supported locales metadata', async () => {
+    const res = await request(app.getHttpServer()).get('/api/v1/meta/locales').expect(200);
+
+    expect(res.body.default).toBe('tr');
+    expect(res.body.supported).toEqual(['tr', 'en']);
+  });
+
   it('completes full Target Hunt flow', async () => {
     const sessionRes = await request(app.getHttpServer())
       .post('/api/v1/game-sessions')

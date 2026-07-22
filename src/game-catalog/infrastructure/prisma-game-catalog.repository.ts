@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../football-data/infrastructure/prisma.service';
+import { pickTranslation } from '../../common/locale/pick-translation';
 import {
   GameCatalogRepository,
   GameFamilyDetailView,
@@ -11,35 +12,67 @@ import {
 export class PrismaGameCatalogRepository implements GameCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllActiveFamilies(): Promise<GameFamilySummaryView[]> {
-    return this.prisma.gameFamily.findMany({
-      where: { status: 'ACTIVE' },
-      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-      select: {
-        id: true,
-        code: true,
-        title: true,
-        description: true,
-        imageUrl: true,
-        logoUrl: true,
-        sortOrder: true,
-      },
-    });
+  findAllActiveFamilies(locale: string): Promise<GameFamilySummaryView[]> {
+    return this.prisma.gameFamily
+      .findMany({
+        where: { status: 'ACTIVE' },
+        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          description: true,
+          imageUrl: true,
+          logoUrl: true,
+          sortOrder: true,
+          translations: {
+            select: {
+              locale: true,
+              title: true,
+              description: true,
+            },
+          },
+        },
+      })
+      .then((families) =>
+        families.map((family) => {
+          const localized = pickTranslation(family.translations, locale, {
+            title: family.title,
+            description: family.description,
+          });
+
+          return {
+            id: family.id,
+            code: family.code,
+            title: localized.title,
+            description: localized.description,
+            imageUrl: family.imageUrl,
+            logoUrl: family.logoUrl,
+            sortOrder: family.sortOrder,
+          };
+        }),
+      );
   }
 
-  async findFamilyByCode(code: string): Promise<GameFamilyDetailView | null> {
+  async findFamilyByCode(code: string, locale: string): Promise<GameFamilyDetailView | null> {
     const family = await this.prisma.gameFamily.findFirst({
       where: { code, status: 'ACTIVE' },
       include: {
+        translations: true,
         games: {
           where: { status: 'ACTIVE' },
           orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
           include: {
+            translations: true,
             scopeRules: {
               where: { status: 'ACTIVE' },
               orderBy: [{ sortOrder: 'asc' }],
               include: {
-                scope: true,
+                scope: {
+                  include: {
+                    translations: true,
+                  },
+                },
               },
             },
           },
@@ -51,34 +84,53 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
       return null;
     }
 
+    const familyLocalized = pickTranslation(family.translations, locale, {
+      title: family.title,
+      description: family.description,
+    });
+
     return {
       id: family.id,
       code: family.code,
-      title: family.title,
-      description: family.description,
+      title: familyLocalized.title,
+      description: familyLocalized.description,
       imageUrl: family.imageUrl,
       logoUrl: family.logoUrl,
       sortOrder: family.sortOrder,
-      games: family.games.map((game) => ({
-        id: game.id,
-        code: game.code,
-        title: game.title,
-        description: game.description,
-        imageUrl: game.imageUrl,
-        bannerImageUrl: game.bannerImageUrl,
-        sortOrder: game.sortOrder,
-        requiresScope: game.requiresScope,
-        scopes: game.requiresScope
-          ? game.scopeRules.map((rule) => ({
-              id: rule.scope.id,
-              code: rule.scope.code,
-              title: rule.scope.title,
-              description: rule.scope.description,
-              imageUrl: rule.scope.imageUrl,
-              sortOrder: rule.sortOrder,
-            }))
-          : null,
-      })),
+      games: family.games.map((game) => {
+        const gameLocalized = pickTranslation(game.translations, locale, {
+          title: game.title,
+          description: game.description,
+        });
+
+        return {
+          id: game.id,
+          code: game.code,
+          title: gameLocalized.title,
+          description: gameLocalized.description,
+          imageUrl: game.imageUrl,
+          bannerImageUrl: game.bannerImageUrl,
+          sortOrder: game.sortOrder,
+          requiresScope: game.requiresScope,
+          scopes: game.requiresScope
+            ? game.scopeRules.map((rule) => {
+                const scopeLocalized = pickTranslation(rule.scope.translations, locale, {
+                  title: rule.scope.title,
+                  description: rule.scope.description,
+                });
+
+                return {
+                  id: rule.scope.id,
+                  code: rule.scope.code,
+                  title: scopeLocalized.title,
+                  description: scopeLocalized.description,
+                  imageUrl: rule.scope.imageUrl,
+                  sortOrder: rule.sortOrder,
+                };
+              })
+            : null,
+        };
+      }),
     };
   }
 

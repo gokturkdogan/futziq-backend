@@ -222,9 +222,26 @@ model GameFamily {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
-  games Game[]
+  games        Game[]
+  translations GameFamilyTranslation[]
 
   @@map("game_families")
+}
+
+model GameFamilyTranslation {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  locale      String
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  family GameFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, locale])
+  @@index([locale])
+  @@map("game_family_translations")
 }
 
 model Game {
@@ -242,13 +259,30 @@ model Game {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  family     GameFamily      @relation(fields: [familyId], references: [id])
-  scopeRules GameScopeRule[]
-  sessions   GameSession[]
+  family       GameFamily        @relation(fields: [familyId], references: [id])
+  scopeRules   GameScopeRule[]
+  sessions     GameSession[]
+  translations GameTranslation[]
 
   @@unique([familyId, code])
   @@index([familyId])
   @@map("games")
+}
+
+model GameTranslation {
+  id          String   @id @default(uuid())
+  gameId      String   @map("game_id")
+  locale      String
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, locale])
+  @@index([locale])
+  @@map("game_translations")
 }
 
 model GameScope {
@@ -262,10 +296,27 @@ model GameScope {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  scopeRules GameScopeRule[]
-  sessions   GameSession[]
+  scopeRules   GameScopeRule[]
+  sessions     GameSession[]
+  translations GameScopeTranslation[]
 
   @@map("game_scopes")
+}
+
+model GameScopeTranslation {
+  id          String   @id @default(uuid())
+  scopeId     String   @map("scope_id")
+  locale      String
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  scope GameScope @relation(fields: [scopeId], references: [id], onDelete: Cascade)
+
+  @@unique([scopeId, locale])
+  @@index([locale])
+  @@map("game_scope_translations")
 }
 
 model GameScopeRule {
