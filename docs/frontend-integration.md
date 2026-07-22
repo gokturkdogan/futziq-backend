@@ -39,6 +39,25 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 
 Frontend origin'iniz bu listeye eklenmeli.
 
+## Lokalizasyon (i18n)
+
+Katalog metinleri (`title`, `description`) locale'e göre döner. URL'de locale yok; API header kullanır:
+
+```
+Accept-Language: tr
+```
+
+Desteklenen değerler: `tr`, `en` (varsayılan: `tr`).
+
+| Endpoint | Lokalize |
+|----------|----------|
+| `GET /api/v1/game-families` | Evet |
+| `GET /api/v1/game-families/:code` | Evet (games, scopes) |
+| `GET /api/v1/meta/locales` | Desteklenen locale listesi |
+| Session / action / result | Hayır — sayılar ve kodlar |
+
+Detaylı sözleşme: [i18n-contract.md](./i18n-contract.md).
+
 ## Standart Hata Formatı
 
 Tüm hatalar aynı yapıda döner:
@@ -57,7 +76,7 @@ Tüm hatalar aynı yapıda döner:
 | HTTP | Code | Ne zaman |
 |------|------|----------|
 | 400 | `PLAYER_NOT_ELIGIBLE` | Oyuncu scope/metric için uygun değil |
-| 400 | `SELECTION_LIMIT_REACHED` | 5 seçim doldu |
+| 400 | `SELECTION_LIMIT_REACHED` | `definitionSnapshot.selectionCount` doldu (Target Hunt: 5, Draft: 6) |
 | 400 | `VALIDATION_ERROR` | Request body/query geçersiz |
 | 400 | `GAME_SCOPE_REQUIRED` | Scope zorunlu ama gönderilmedi |
 | 400 | `INVALID_GAME_SCOPE_COMBINATION` | Seçilen scope bu game için geçerli değil |
@@ -137,11 +156,12 @@ Family detayı. Her family altında `games` listesi döner. Scope gerektiren oyu
       "bannerImageUrl": "/images/games/banners/goals.png",
       "requiresScope": true,
       "scopes": [
-        { "code": "CAREER", "title": "Kariyer" },
-        { "code": "CLUB", "title": "Kulüp" },
-        { "code": "NATIONAL_TEAM", "title": "Milli Takım" },
-        { "code": "WORLD_CUP", "title": "Dünya Kupası" },
-        { "code": "CHAMPIONS_LEAGUE", "title": "Şampiyonlar Ligi" }
+        { "code": "CAREER", "title": "Kariyer", "imageUrl": "..." },
+        { "code": "CLUB", "title": "Kulüp", "imageUrl": "..." },
+        { "code": "NATIONAL_TEAM", "title": "Milli Takım", "imageUrl": "..." },
+        { "code": "WORLD_CUP", "title": "Dünya Kupası", "imageUrl": "..." },
+        { "code": "CHAMPIONS_LEAGUE", "title": "Şampiyonlar Ligi", "imageUrl": "..." },
+        { "code": "RANDOM", "title": "Rastgele", "imageUrl": null }
       ]
     },
     {
@@ -162,9 +182,15 @@ Family detayı. Her family altında `games` listesi döner. Scope gerektiren oyu
   "games": [
     {
       "code": "TALLEST_XI",
-      "title": "En Uzun XI",
+      "title": "En Uzun 6",
       "imageUrl": "/images/games/tallest-xi.png",
       "bannerImageUrl": "/images/games/banners/tallest-xi.png",
+      "requiresScope": false,
+      "scopes": null
+    },
+    {
+      "code": "SHORTEST_XI",
+      "title": "En Kısa 6",
       "requiresScope": false,
       "scopes": null
     }
@@ -191,16 +217,18 @@ Yeni oyun başlatır.
   "familyCode": "TARGET_HUNT",
   "gameCode": "GOALS",
   "scopeCode": "CAREER",
-  "targetValue": 500
+  "targetValue": 500,
+  "playerMode": "SINGLE"
 }
 ```
 
 | Alan | Açıklama |
 |------|----------|
 | `familyCode` | Family kodu (`TARGET_HUNT`, `DRAFT`) |
-| `gameCode` | Game kodu (`GOALS`, `ASSISTS`, `TALLEST_XI` ...) |
-| `scopeCode` | Scope kodu. `requiresScope=true` ise zorunlu. `RANDOM` gönderildiğinde backend oyun başında geçerli kapsamlardan birini seçer. İlk kurulum: `npm run db:seed-random-scope` (yalnızca RANDOM scope ekler, diğer katalog verisine dokunmaz) |
-| `targetValue` | Opsiyonel sabit hedef. Gönderilmezse backend random üretir (Target Hunt) |
+| `gameCode` | Game kodu (`GOALS`, `ASSISTS`, `TALLEST_XI`, `SHORTEST_XI` ...) |
+| `scopeCode` | Scope kodu. `requiresScope=true` ise zorunlu. `RANDOM` gönderildiğinde backend oyun başında geçerli kapsamlardan birini seçer; yanıtta `scopeCode` çözülmüş gerçek kod olur (`CAREER` vb.). İlk kurulum: `npm run db:seed-random-scope` |
+| `targetValue` | Opsiyonel sabit hedef (yalnızca Target Hunt). Gönderilmezse backend random üretir |
+| `playerMode` | `SINGLE` (varsayılan) veya `MULTIPLAYER` — aynı ekranda sırayla oynama |
 
 **Response 201:**
 
@@ -211,7 +239,15 @@ Yeni oyun başlatır.
   "stateVersion": 0,
   "targetValue": 487,
   "seed": "uuid",
-  "definitionSnapshot": { /* config objesi */ },
+  "scopeCode": "CAREER",
+  "playerMode": "SINGLE",
+  "currentTurnParticipantId": "participant-uuid",
+  "definitionSnapshot": {
+    "family": "TARGET_HUNT",
+    "metric": "CAREER_GOALS",
+    "selectionCount": 5,
+    "revealPolicy": "IMMEDIATE"
+  },
   "startedAt": "2026-07-21T06:00:00.000Z",
   "completedAt": null,
   "expiresAt": "2026-07-22T06:00:00.000Z",
@@ -222,14 +258,18 @@ Yeni oyun başlatır.
       "turnOrder": 0,
       "status": "ACTIVE",
       "aggregateValue": 0,
-      "selectionCount": 0
+      "selectionCount": 0,
+      "lineup": null
     }
   ],
   "selections": []
 }
 ```
 
-> **Not:** `targetValue` frontend'e gösterilebilir — kullanıcı 5 oyuncunun toplam kariyer golünü bu hedefe yaklaştırmaya çalışır.
+> **Notlar:**
+> - `scopeCode`: Target Hunt'ta çözülmüş kapsam. `RANDOM` seçildiyse `CAREER` gibi gerçek kod döner.
+> - `targetValue`: Target Hunt'ta gösterilir. Draft'ta `0` veya `null` olabilir — sonuç için `aggregateValue` kullanın.
+> - `participants[].lineup`: Yalnızca Draft'ta dolu array; Target Hunt'ta `null`.
 
 ---
 
@@ -239,7 +279,7 @@ Güncel session state.
 
 ---
 
-#### `GET /api/v1/game-sessions/:sessionId/players?q=ronaldo&page=1&limit=20&slotCode=LB`
+#### `GET /api/v1/game-sessions/:sessionId/players?q=ronaldo&page=1&limit=20&slotCode=DEF1`
 
 Uygun oyuncu arama.
 
@@ -248,7 +288,7 @@ Uygun oyuncu arama.
 | `q` | string | Evet | Min 2 karakter, case-insensitive |
 | `page` | number | Hayır | Default 1 |
 | `limit` | number | Hayır | Default 20, max 50 |
-| `slotCode` | string | Hayır | Draft için slot filtreleme (`GK`, `LB`, `LCB` ...) |
+| `slotCode` | string | Hayır | Draft için slot filtreleme (`GK`, `DEF1`, `DEF2`, `MID1`, `MID2`, `ATT`) |
 
 **Response 200:**
 
@@ -291,7 +331,7 @@ Oyuncu seçimi (SELECT_PLAYER).
   "actionId": "550e8400-e29b-41d4-a716-446655440000",
   "expectedVersion": 0,
   "playerId": "player-id",
-  "slotCode": "LB"
+  "slotCode": "DEF1"
 }
 ```
 
@@ -313,16 +353,37 @@ Oyuncu seçimi (SELECT_PLAYER).
     "targetValue": 487,
     "selectionCount": 1,
     "aggregateValue": 128,
+    "lineup": [
+      {
+        "slotCode": "GK",
+        "displayName": "Goalkeeper",
+        "line": "GK",
+        "occupied": false,
+        "playerId": null,
+        "metricValue": null,
+        "playerSnapshot": null
+      },
+      {
+        "slotCode": "DEF1",
+        "displayName": "Defender",
+        "line": "DEF",
+        "occupied": true,
+        "playerId": "...",
+        "metricValue": 188,
+        "playerSnapshot": { "displayName": "...", "heightCm": 188 }
+      }
+    ],
     "selections": [
       {
         "playerId": "...",
         "selectionOrder": 1,
-        "slotCode": "LB",
-        "metricValue": 128,
+        "slotCode": "DEF1",
+        "metricValue": 188,
         "playerSnapshot": {
           "id": "...",
-          "displayName": "Cristiano Ronaldo",
-          "primaryPosition": "Centre-Forward"
+          "displayName": "...",
+          "primaryPosition": "Defender",
+          "heightCm": 188
         },
         "revealed": true
       }
@@ -334,7 +395,9 @@ Oyuncu seçimi (SELECT_PLAYER).
 }
 ```
 
-5. seçimden sonra:
+Target Hunt'ta `lineup` `null` olabilir. Tamamlanma eşiği `definitionSnapshot.selectionCount` ile belirlenir (Target Hunt: 5, Draft: 6).
+
+5. seçimden sonra (Target Hunt örneği):
 
 ```json
 {
@@ -386,7 +449,7 @@ Event geçmişi (audit/replay için).
 
 Oyun sonucu (yalnızca `COMPLETED` session).
 
-**Response 200:**
+**Target Hunt response 200:**
 
 ```json
 {
@@ -412,6 +475,48 @@ Oyun sonucu (yalnızca `COMPLETED` session).
   "resultStatus": "FINAL"
 }
 ```
+
+**Draft response 200** (ek alanlar):
+
+```json
+{
+  "aggregateValue": 1092,
+  "selectionCount": 6,
+  "objective": "MAX",
+  "totalMetricValue": 1092,
+  "averageMetricValue": 182,
+  "performanceRating": "AVERAGE",
+  "lineupTemplate": {
+    "code": "FORMATION_1_2_2_1",
+    "name": "1-2-2-1",
+    "slots": [{ "code": "GK", "displayName": "Goalkeeper", "line": "GK" }]
+  },
+  "lineup": [
+    {
+      "slotCode": "GK",
+      "displayName": "Goalkeeper",
+      "line": "GK",
+      "occupied": true,
+      "playerId": "...",
+      "metricValue": 198,
+      "playerSnapshot": { "displayName": "...", "heightCm": 198 }
+    }
+  ],
+  "selections": [
+    {
+      "playerId": "...",
+      "selectionOrder": 1,
+      "slotCode": "GK",
+      "metricValue": 198,
+      "playerSnapshot": { "displayName": "..." }
+    }
+  ],
+  "sessionStatus": "COMPLETED",
+  "resultStatus": "FINAL"
+}
+```
+
+> Draft'ta `targetValue` / `performanceRating` / `absoluteDifference` anlamlı değildir; UI'da `aggregateValue` (toplam boy) ve `objective` (`MAX` = en uzun, `MIN` = en kısa) kullanın.
 
 **Performance Rating değerleri:** `PERFECT` | `EXCELLENT` | `GOOD` | `AVERAGE` | `POOR`
 
@@ -498,14 +603,27 @@ npm run db:update-draft-config
 
 Sadece `games.config` JSON'unu günceller; görseller ve diğer katalog alanlarına dokunmaz.
 
+### Draft slot referansı
+
+| slotCode | line | Kabul edilen DB mevkileri (örnek) |
+|----------|------|-----------------------------------|
+| `GK` | GK | Goalkeeper |
+| `DEF1`, `DEF2` | DEF | Defender, Centre-Back, Left-Back, Right-Back |
+| `MID1`, `MID2` | MID | Midfield, Central Midfield, Defensive Midfield, Attacking Midfield |
+| `ATT` | ATT | Attack, Centre-Forward, Left Winger, Right Winger |
+
+UI formasyonu `participants[].lineup` veya `definitionSnapshot.lineupTemplate.slots` üzerinden çizilir; pozisyon eşlemesi client'ta yapılmaz.
+
 ---
 
 ## TypeScript Tipleri (Frontend için kopyalanabilir)
 
 ```typescript
 type GameSessionStatus = 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+type PlayerMode = 'SINGLE' | 'MULTIPLAYER';
 type PerformanceRating = 'PERFECT' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR';
-type RevealPolicy = 'IMMEDIATE' | 'ROUND_END' | 'GAME_END' | 'RANGE_ONLY' | 'HIDDEN';
+type DraftLineCode = 'GK' | 'DEF' | 'MID' | 'ATT';
+type DraftObjective = 'MAX' | 'MIN';
 
 interface ApiError {
   code: string;
@@ -522,6 +640,47 @@ interface Paginated<T> {
   totalPages: number;
 }
 
+interface GameScopeSummary {
+  code: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+}
+
+interface GameSummary {
+  code: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  bannerImageUrl: string | null;
+  requiresScope: boolean;
+  scopes: GameScopeSummary[] | null;
+}
+
+interface LineupSlotDefinition {
+  code: string;
+  displayName: string;
+  line?: DraftLineCode;
+  acceptedPositionGroups: string[];
+}
+
+interface LineupTemplate {
+  code: string;
+  name: string;
+  slots: LineupSlotDefinition[];
+}
+
+interface DraftLineupSlot {
+  slotCode: string;
+  displayName: string;
+  line: DraftLineCode;
+  occupied: boolean;
+  playerId: string | null;
+  metricValue: number | null;
+  playerSnapshot: Record<string, unknown> | null;
+}
+
 interface EligiblePlayer {
   id: string;
   displayName: string;
@@ -534,38 +693,101 @@ interface EligiblePlayer {
   alreadySelected: boolean;
 }
 
+interface GameDefinitionSnapshot {
+  family: 'TARGET_HUNT' | 'DRAFT';
+  metric: string;
+  selectionCount: number;
+  revealPolicy: string;
+  objective?: DraftObjective;
+  lineupTemplate?: LineupTemplate;
+}
+
+interface GameParticipant {
+  id: string;
+  externalParticipantId: string;
+  turnOrder: number;
+  status: string;
+  aggregateValue: number;
+  selectionCount: number;
+  lineup: DraftLineupSlot[] | null;
+}
+
 interface GameSelection {
   playerId: string;
   selectionOrder: number;
   slotCode?: string | null;
   metricValue: number | null;
-  playerSnapshot: {
-    id: string;
-    displayName: string;
-    primaryPosition?: string;
-  };
+  playerSnapshot: Record<string, unknown>;
   revealed: boolean;
+}
+
+interface GameSession {
+  id: string;
+  status: GameSessionStatus;
+  stateVersion: number;
+  targetValue: number | null;
+  seed: string;
+  scopeCode: string | null;
+  playerMode: PlayerMode;
+  currentTurnParticipantId: string | null;
+  definitionSnapshot: GameDefinitionSnapshot;
+  participants: GameParticipant[];
+  selections: GameSelection[];
 }
 
 interface SelectPlayerRequest {
   actionId: string;
   expectedVersion: number;
   playerId: string;
+  slotCode?: string; // Draft'ta zorunlu
+}
+
+interface ActionState {
+  sessionId: string;
+  status: GameSessionStatus;
+  stateVersion: number;
+  targetValue: number | null;
+  selectionCount: number;
+  aggregateValue: number;
+  playerMode?: PlayerMode;
+  currentTurnParticipantId?: string | null;
+  lineup?: DraftLineupSlot[] | null;
+  selections: GameSelection[];
 }
 
 interface ActionResponse {
-  state: {
-    sessionId: string;
-    status: GameSessionStatus;
-    stateVersion: number;
-    targetValue: number;
-    selectionCount: number;
-    aggregateValue: number;
-    selections: GameSelection[];
-  };
+  state: ActionState;
   eventType: 'PLAYER_SELECTED' | 'GAME_COMPLETED';
   completed: boolean;
   idempotentReplay: boolean;
+}
+
+interface GameResult {
+  id: string;
+  sessionId: string;
+  participantId: string;
+  targetValue: number;
+  aggregateValue: number;
+  absoluteDifference: number;
+  exactHit: boolean;
+  performanceRating: PerformanceRating | string;
+  selectionCount: number;
+  selections: Array<{
+    playerId: string;
+    selectionOrder: number;
+    slotCode?: string | null;
+    metricValue: number;
+    playerSnapshot: Record<string, unknown>;
+  }>;
+  durationMs: number;
+  sessionStatus: string;
+  resultStatus: string;
+  // Draft-only (Target Hunt'ta null/undefined olabilir)
+  objective?: DraftObjective | null;
+  lineupTemplate?: LineupTemplate | null;
+  lineup?: DraftLineupSlot[] | null;
+  totalMetricValue?: number | null;
+  averageMetricValue?: number | null;
 }
 ```
 
@@ -600,12 +822,13 @@ Her response'da `X-Trace-Id` header döner. Hata raporlarken bu ID'yi loglayın.
 | Özellik | Durum |
 |---------|-------|
 | JWT / OAuth auth | ❌ `X-Participant-Id` kullanın |
-| WebSocket multiplayer | ❌ REST yeterli |
+| WebSocket multiplayer | ❌ REST + `playerMode: MULTIPLAYER` yeterli |
 | Oyuncu fotoğrafı URL | ❌ Snapshot'ta yok |
-| OpenAPI response DTO'ları | ⚠️ Swagger'da kısmi — bu doküman referans |
+| OpenAPI response DTO'ları | ⚠️ Swagger'da kısmi — bu doküman + `api/docs-json` referans |
 
 ## İlgili Dokümanlar
 
-- [README](../README.md) — Kurulum
+- [README](../README.md) — Kurulum ve hızlı API örnekleri
+- [i18n-contract.md](./i18n-contract.md) — Locale, katalog çevirileri, Flutter sözleşmesi
 - [architecture.md](./architecture.md) — Backend mimarisi
-- [database-discovery.md](./database-discovery.md) — Veri modeli (backend)
+- [database-discovery.md](./database-discovery.md) — Veri modeli (pozisyon, boy metrikleri)

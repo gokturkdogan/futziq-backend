@@ -147,16 +147,18 @@ curl -X POST http://localhost:3000/api/v1/game-sessions \
   -H "X-Participant-Id: player-1" \
   -d '{"familyCode":"DRAFT","gameCode":"TALLEST_XI"}'
 
-# 2. Search only LB-eligible players
-curl "http://localhost:3000/api/v1/game-sessions/{sessionId}/players?q=an&slotCode=LB" \
+# 2. Search DEF-eligible players (6-slot lineup: GK, DEF1, DEF2, MID1, MID2, ATT)
+curl "http://localhost:3000/api/v1/game-sessions/{sessionId}/players?q=an&slotCode=DEF1" \
   -H "X-Participant-Id: player-1"
 
 # 3. Select player into a lineup slot
 curl -X POST http://localhost:3000/api/v1/game-sessions/{sessionId}/actions \
   -H "Content-Type: application/json" \
   -H "X-Participant-Id: player-1" \
-  -d '{"actionId":"uuid","expectedVersion":0,"playerId":"...","slotCode":"LB"}'
+  -d '{"actionId":"uuid","expectedVersion":0,"playerId":"...","slotCode":"DEF1"}'
 ```
+
+Tam sözleşme: [docs/frontend-integration.md](./docs/frontend-integration.md). Draft config güncelleme: `npm run db:update-draft-config`.
 
 ## Extending the Engine
 
