@@ -88,12 +88,9 @@ npm run db:seed
 
 ### Vercel deployment
 
-Serverless entrypoint: `api/index.js` → boots `dist/create-app.js` (same app as local, including `/docs` and `/swagger`).
+`lineup-api` ile aynı model: `api/index.ts` + `src/serverless.ts` + `public/index.html` + `outputDirectory: public` in `vercel.json`.
 
-**Vercel dashboard (Settings → General) — kritik:**
-- Framework Preset: **Other**
-- **Output Directory: boş bırak** (`public` yazılıysa sil, yoksa deploy patlar)
-- Build Command: boş ( `vercel.json` kullanır)
+**Vercel dashboard:** Framework Preset → **Other**, Output Directory → boş bırak (`vercel.json` zaten `public` diyor).
 
 Required env vars: `DATABASE_URL`, `CORS_ORIGINS`
 
