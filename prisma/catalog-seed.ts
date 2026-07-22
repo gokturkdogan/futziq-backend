@@ -283,12 +283,12 @@ export const DRAFT_GAMES = [
     bannerImageUrl: '/images/games/banners/tallest-xi.png',
     translations: {
       tr: {
-        title: 'En Uzun XI',
-        description: '4-2-3-1 diziliminde boy toplamı en yüksek ilk 11i kur.',
+        title: 'En Uzun 6',
+        description: '1 kaleci, 2 defans, 2 orta saha, 1 forvet ile en uzun kadroyu kur.',
       },
       en: {
-        title: 'Tallest XI',
-        description: 'Build the tallest starting XI in a 4-2-3-1 formation.',
+        title: 'Tallest Six',
+        description: 'Build the tallest squad with 1 GK, 2 DEF, 2 MID, and 1 ATT.',
       },
     },
   },
@@ -299,12 +299,12 @@ export const DRAFT_GAMES = [
     bannerImageUrl: '/images/games/banners/shortest-xi.png',
     translations: {
       tr: {
-        title: 'En Kısa XI',
-        description: '4-2-3-1 diziliminde boy toplamı en düşük ilk 11i kur.',
+        title: 'En Kısa 6',
+        description: '1 kaleci, 2 defans, 2 orta saha, 1 forvet ile en kısa kadroyu kur.',
       },
       en: {
-        title: 'Shortest XI',
-        description: 'Build the shortest starting XI in a 4-2-3-1 formation.',
+        title: 'Shortest Six',
+        description: 'Build the shortest squad with 1 GK, 2 DEF, 2 MID, and 1 ATT.',
       },
     },
   },

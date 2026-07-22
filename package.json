@@ -20,6 +20,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
     "db:seed-random-scope": "ts-node --transpile-only prisma/seed-random-scope.ts",
+    "db:update-draft-config": "ts-node --transpile-only prisma/update-draft-config.ts",
     "db:export-catalog-media": "ts-node --transpile-only prisma/export-catalog-media.ts",
     "db:studio": "prisma studio"
   },

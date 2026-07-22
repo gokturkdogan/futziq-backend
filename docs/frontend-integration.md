@@ -478,25 +478,25 @@ action.actionId = crypto.randomUUID();
 
 ## Draft — Frontend Akışı
 
-Draft UI aynı session endpoint'lerini kullanır, fakat seçimler slot bazlıdır.
+Draft UI aynı session endpoint'lerini kullanır. Backend 6 slotlu `1-2-2-1` formasyonunu (`GK`, `DEF1`, `DEF2`, `MID1`, `MID2`, `ATT`) ve pozisyon eşlemesini sağlar; client yalnızca API yanıtlarını render eder.
 
-1. `GET /api/v1/game-families` ile family listele
-2. `GET /api/v1/game-families/:code` ile game listesini al
-3. Kullanıcı game seçer, `requiresScope=true` ise scope seçer
-4. `POST /api/v1/game-sessions` ile `familyCode + gameCode + scopeCode` gönder
-2. `POST /api/v1/game-sessions` ile session aç
-3. `definitionSnapshot.lineupTemplate.slots` üzerinden boş slotları göster
-4. Kullanıcı slot seçince `GET /players?q=...&slotCode=LB` çağır
-5. `POST /actions` içinde `slotCode` gönder
-6. 11 slot dolunca `GET /result`
+1. `GET /api/v1/game-families/DRAFT` ile oyunları al (`requiresScope: false`)
+2. `POST /api/v1/game-sessions` → `{ "familyCode": "DRAFT", "gameCode": "TALLEST_XI" }`
+3. Session yanıtında:
+   - `definitionSnapshot.lineupTemplate.slots` — slot listesi (`line`: `GK|DEF|MID|ATT`)
+   - `participants[].lineup` — her slot için `occupied`, `playerId`, `metricValue`, `playerSnapshot`
+4. Slot seçilince `GET /players?q=...&slotCode=DEF1`
+5. `POST /actions` → `{ actionId, expectedVersion, playerId, slotCode }`
+6. Action state'te `lineup` güncellenmiş gelir
+7. 6 slot dolunca `GET /result` → `lineup`, `objective`, `totalMetricValue`, `averageMetricValue`
 
-Draft result payload içinde şunlar bulunur:
+**DB config güncelleme (tam seed değil):**
 
-- `objective`: `MAX` veya `MIN`
-- `lineupTemplate`
-- `lineup`
-- `totalMetricValue`
-- `averageMetricValue`
+```bash
+npm run db:update-draft-config
+```
+
+Sadece `games.config` JSON'unu günceller; görseller ve diğer katalog alanlarına dokunmaz.
 
 ---
 

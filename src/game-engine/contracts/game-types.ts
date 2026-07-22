@@ -137,10 +137,14 @@ export enum PositionEligibilityPolicy {
   FREE_POSITION = 'FREE_POSITION',
 }
 
+export type DraftLineCode = 'GK' | 'DEF' | 'MID' | 'ATT';
+
 export interface LineupSlotDefinition {
   code: string;
   displayName: string;
   acceptedPositionGroups: PositionGroup[];
+  /** UI grouping line for draft formations (GK / DEF / MID / ATT). */
+  line?: DraftLineCode;
 }
 
 export interface LineupTemplate {
@@ -208,6 +212,54 @@ export const DEFAULT_TARGET_HUNT_CONFIG: GameDefinitionConfig = {
   performanceRating: DEFAULT_PERFORMANCE_RATING,
 };
 
+export const FORMATION_1_2_2_1: LineupTemplate = {
+  code: 'FORMATION_1_2_2_1',
+  name: '1-2-2-1',
+  slots: [
+    {
+      code: 'GK',
+      displayName: 'Goalkeeper',
+      line: 'GK',
+      acceptedPositionGroups: [PositionGroup.GK],
+    },
+    {
+      code: 'DEF1',
+      displayName: 'Defender',
+      line: 'DEF',
+      acceptedPositionGroups: [PositionGroup.CB, PositionGroup.LB, PositionGroup.RB],
+    },
+    {
+      code: 'DEF2',
+      displayName: 'Defender',
+      line: 'DEF',
+      acceptedPositionGroups: [PositionGroup.CB, PositionGroup.LB, PositionGroup.RB],
+    },
+    {
+      code: 'MID1',
+      displayName: 'Midfield',
+      line: 'MID',
+      acceptedPositionGroups: [PositionGroup.CM, PositionGroup.DM, PositionGroup.AM],
+    },
+    {
+      code: 'MID2',
+      displayName: 'Midfield',
+      line: 'MID',
+      acceptedPositionGroups: [PositionGroup.CM, PositionGroup.DM, PositionGroup.AM],
+    },
+    {
+      code: 'ATT',
+      displayName: 'Attack',
+      line: 'ATT',
+      acceptedPositionGroups: [
+        PositionGroup.ST,
+        PositionGroup.CF,
+        PositionGroup.LW,
+        PositionGroup.RW,
+      ],
+    },
+  ],
+};
+
 export const FORMATION_4_2_3_1: LineupTemplate = {
   code: 'FORMATION_4_2_3_1',
   name: '4-2-3-1',
@@ -266,13 +318,13 @@ export const DEFAULT_DRAFT_CONFIG: GameDefinitionConfig = {
   family: GameFamily.DRAFT,
   metric: MetricCode.HEIGHT_CM,
   scope: ScopeCode.GLOBAL_FREE,
-  selectionCount: 11,
+  selectionCount: 6,
   aggregation: AggregationType.SUM,
   comparison: ComparisonType.HIGHEST,
   objective: ObjectiveType.MAX,
   revealPolicy: RevealPolicy.IMMEDIATE,
   duplicatePolicy: DuplicatePolicy.REJECT_SAME_PARTICIPANT,
   activeStatusFilter: ActiveStatusFilter.ANY,
-  lineupTemplate: FORMATION_4_2_3_1,
+  lineupTemplate: FORMATION_1_2_2_1,
   positionEligibilityPolicy: PositionEligibilityPolicy.PRIMARY_AND_SECONDARY,
 };

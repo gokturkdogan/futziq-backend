@@ -1,7 +1,7 @@
 import { createSeededRandom, randomIntInRange } from './core/seeded-random';
 import { PercentDiffPerformanceRatingService } from './scoring/performance-rating.service';
 import { ClosestScoreCalculator } from './scoring/closest-score.calculator';
-import { DEFAULT_PERFORMANCE_RATING } from './contracts/game-types';
+import { DEFAULT_PERFORMANCE_RATING, FORMATION_1_2_2_1 } from './contracts/game-types';
 import { PositionNormalizerService } from '../football-data/application/position-normalizer.service';
 
 describe('SeededRandom', () => {
@@ -149,5 +149,14 @@ describe('PositionNormalizerService', () => {
 
     expect(positions).toContain('LB');
     expect(positions).toContain('CB');
+  });
+
+  it('includes coarse Attack positions in attack slot search', () => {
+    const attSlot = FORMATION_1_2_2_1.slots.find((slot) => slot.code === 'ATT');
+    expect(attSlot).toBeDefined();
+
+    const allowed = service.getAllowedRawPositionsForSlot(attSlot!);
+    expect(allowed).toContain('Attack');
+    expect(allowed).toContain('Centre-Forward');
   });
 });

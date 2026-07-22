@@ -4,6 +4,8 @@ import {
   ProcessActionResult,
 } from '../../game-engine/contracts/game-family-handler';
 import { PlayerMode } from './session-runtime';
+import { DraftLineupSlotView } from './draft-lineup';
+import { LineupTemplate, ObjectiveType } from '../../game-engine/contracts/game-types';
 
 export interface CreateSessionInput {
   familyCode: string;
@@ -35,6 +37,7 @@ export interface GameSessionView {
     status: string;
     aggregateValue: number;
     selectionCount: number;
+    lineup: DraftLineupSlotView[] | null;
   }>;
   selections: Array<{
     id: string;
@@ -69,6 +72,11 @@ export interface GameResultView {
   durationMs: number;
   sessionStatus: string;
   resultStatus: string;
+  objective?: ObjectiveType | null;
+  lineupTemplate?: LineupTemplate | null;
+  lineup?: DraftLineupSlotView[] | null;
+  totalMetricValue?: number | null;
+  averageMetricValue?: number | null;
 }
 
 export interface GameSessionRepository {

@@ -28,20 +28,20 @@ const RAW_TO_GROUPS: Record<string, PositionGroup[]> = {
 
 const GROUP_TO_RAW: Record<PositionGroup, string[]> = {
   [PositionGroup.GK]: ['Goalkeeper'],
-  [PositionGroup.LB]: ['Left-Back'],
-  [PositionGroup.LWB]: ['Left-Back', 'Left Midfield', 'Left Winger'],
+  [PositionGroup.LB]: ['Left-Back', 'Defender'],
+  [PositionGroup.LWB]: ['Left-Back', 'Left Midfield', 'Left Winger', 'Defender'],
   [PositionGroup.CB]: ['Centre-Back', 'Sweeper', 'Defender'],
-  [PositionGroup.RB]: ['Right-Back'],
-  [PositionGroup.RWB]: ['Right-Back', 'Right Midfield', 'Right Winger'],
+  [PositionGroup.RB]: ['Right-Back', 'Defender'],
+  [PositionGroup.RWB]: ['Right-Back', 'Right Midfield', 'Right Winger', 'Defender'],
   [PositionGroup.DM]: ['Defensive Midfield', 'Central Midfield', 'Midfield'],
   [PositionGroup.CM]: ['Central Midfield', 'Defensive Midfield', 'Midfield'],
   [PositionGroup.AM]: ['Attacking Midfield', 'Midfield'],
-  [PositionGroup.LM]: ['Left Midfield', 'Left Winger'],
-  [PositionGroup.LW]: ['Left Winger', 'Left Midfield'],
-  [PositionGroup.RM]: ['Right Midfield', 'Right Winger'],
-  [PositionGroup.RW]: ['Right Winger', 'Right Midfield'],
-  [PositionGroup.CF]: ['Centre-Forward', 'Second Striker'],
-  [PositionGroup.ST]: ['Centre-Forward', 'Second Striker'],
+  [PositionGroup.LM]: ['Left Midfield', 'Left Winger', 'Midfield'],
+  [PositionGroup.LW]: ['Left Winger', 'Left Midfield', 'Attack'],
+  [PositionGroup.RM]: ['Right Midfield', 'Right Winger', 'Midfield'],
+  [PositionGroup.RW]: ['Right Winger', 'Right Midfield', 'Attack'],
+  [PositionGroup.CF]: ['Centre-Forward', 'Second Striker', 'Attack'],
+  [PositionGroup.ST]: ['Centre-Forward', 'Second Striker', 'Attack'],
 };
 
 @Injectable()

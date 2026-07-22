@@ -3,7 +3,9 @@ import { PrismaService } from '../../football-data/infrastructure/prisma.service
 import {
   GameActionType,
   GameEventType,
+  ObjectiveType,
   RevealPolicy,
+  type LineupTemplate,
 } from '../../game-engine/contracts/game-types';
 import { parseGameDefinitionConfig } from '../../game-engine/core/config-parser';
 import {
@@ -38,6 +40,7 @@ import {
   parseSessionRuntime,
   PlayerMode,
 } from '../domain/session-runtime';
+import { buildDraftLineup, type DraftLineupSlotView } from '../domain/draft-lineup';
 
 const GAME_SESSION_VIEW_INCLUDE = {
   participants: true,
@@ -578,6 +581,11 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       }>;
       durationMs?: number;
       selectionCount?: number;
+      objective?: ObjectiveType;
+      lineupTemplate?: LineupTemplate;
+      lineup?: DraftLineupSlotView[];
+      totalMetricValue?: number;
+      averageMetricValue?: number;
     };
 
     return {
@@ -594,7 +602,51 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       durationMs: payload.durationMs ?? 0,
       sessionStatus: session.status,
       resultStatus: session.status === 'COMPLETED' ? 'FINAL' : 'PENDING',
+      objective: payload.objective ?? null,
+      lineupTemplate: payload.lineupTemplate ?? null,
+      lineup: payload.lineup ?? null,
+      totalMetricValue: payload.totalMetricValue ?? result.aggregateValue,
+      averageMetricValue: payload.averageMetricValue ?? null,
     };
+  }
+
+  private mapParticipantSelections(
+    participantId: string,
+    selections: Array<{
+      participantId: string;
+      playerId: string;
+      metricValueSnapshot: number;
+      playerSnapshot: unknown;
+    }>,
+    revealImmediate: boolean,
+  ) {
+    return selections
+      .filter((selection) => selection.participantId === participantId)
+      .map((selection) => ({
+        playerId: selection.playerId,
+        slotCode:
+          ((selection.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ??
+          null,
+        metricValue: revealImmediate ? selection.metricValueSnapshot : 0,
+        playerSnapshot: selection.playerSnapshot as Record<string, unknown>,
+      }));
+  }
+
+  private buildParticipantLineup(
+    definition: ReturnType<typeof parseGameDefinitionConfig>,
+    participantId: string,
+    selections: Array<{
+      participantId: string;
+      playerId: string;
+      metricValueSnapshot: number;
+      playerSnapshot: unknown;
+    }>,
+    revealImmediate: boolean,
+  ) {
+    return buildDraftLineup(
+      definition,
+      this.mapParticipantSelections(participantId, selections, revealImmediate),
+    );
   }
 
   async getPlayerSnapshot(playerId: string): Promise<Record<string, unknown> | null> {
@@ -643,6 +695,14 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         runtime.playerMode,
         definition.selectionCount,
       ),
+      lineup: participant
+        ? this.buildParticipantLineup(
+            definition,
+            participant.id,
+            session.selections,
+            revealImmediate,
+          )
+        : null,
       selections: session.selections
         .filter((s) => s.participantId === participantId)
         .map((s) => ({
@@ -716,6 +776,12 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         status: p.status,
         aggregateValue: p.aggregateValue,
         selectionCount: p.selectionCount,
+        lineup: this.buildParticipantLineup(
+          definition,
+          p.id,
+          session.selections,
+          revealImmediate,
+        ),
       })),
       selections: session.selections.map((s) => ({
         id: s.id,

@@ -173,7 +173,7 @@ describe('Target Hunt E2E', () => {
       .expect(201);
 
     const sessionId = sessionRes.body.id;
-    const slots = ['GK', 'LB', 'LCB', 'RCB', 'RB', 'LCM', 'RCM', 'LW', 'CAM', 'RW', 'ST'];
+    const slots = ['GK', 'DEF1', 'DEF2', 'MID1', 'MID2', 'ATT'];
     const queries = ['an', 'ma', 'ri', 'al', 'er'];
 
     let version = 0;
@@ -216,8 +216,10 @@ describe('Target Hunt E2E', () => {
       .set('X-Participant-Id', participant)
       .expect(200);
 
-    expect(result.body.selectionCount).toBe(11);
-    expect(result.body.aggregateValue).toBeGreaterThan(1500);
+    expect(result.body.selectionCount).toBe(6);
+    expect(result.body.aggregateValue).toBeGreaterThan(900);
+    expect(result.body.lineup).toHaveLength(6);
+    expect(result.body.objective).toBe('MAX');
     expect(result.body.selections.every((item: { slotCode?: string }) => item.slotCode)).toBe(true);
   }, 90000);
 });
