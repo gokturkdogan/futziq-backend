@@ -29,6 +29,7 @@ const DOMAIN_STATUS_MAP: Record<ErrorCode, HttpStatus> = {
   [ErrorCode.PLAYER_NOT_ELIGIBLE]: HttpStatus.BAD_REQUEST,
   [ErrorCode.PLAYER_ALREADY_SELECTED]: HttpStatus.CONFLICT,
   [ErrorCode.SELECTION_LIMIT_REACHED]: HttpStatus.BAD_REQUEST,
+  [ErrorCode.NOT_YOUR_TURN]: HttpStatus.BAD_REQUEST,
   [ErrorCode.INVALID_GAME_ACTION]: HttpStatus.BAD_REQUEST,
   [ErrorCode.ACTION_ALREADY_PROCESSED]: HttpStatus.CONFLICT,
   [ErrorCode.STATE_VERSION_CONFLICT]: HttpStatus.CONFLICT,

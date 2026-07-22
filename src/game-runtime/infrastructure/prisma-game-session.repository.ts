@@ -28,6 +28,16 @@ import {
   GAME_CATALOG_REPOSITORY,
   GameCatalogRepository,
 } from '../../game-catalog/domain/game-catalog.repository';
+import {
+  buildParticipantExternalIds,
+  canAccessSession,
+  encodeDefinitionSnapshot,
+  getCurrentTurnParticipantId,
+  getExpectedTurnParticipant,
+  isSessionFullyComplete,
+  parseSessionRuntime,
+  PlayerMode,
+} from '../domain/session-runtime';
 
 @Injectable()
 export class PrismaGameSessionRepository implements GameSessionRepository {
@@ -83,9 +93,11 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     }
 
     const config = parseGameDefinitionConfig(resolved.config);
+    const playerMode = input.playerMode ?? PlayerMode.SINGLE;
     const seed = uuidv4();
     const handler = this.gameFamilyRegistry.get(config.family);
     const sessionId = uuidv4();
+    const participantExternalIds = buildParticipantExternalIds(input.externalParticipantId, playerMode);
 
     const targetValue =
       input.targetValue != null
@@ -99,7 +111,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         gameId: resolved.gameId,
         scopeId: resolved.scopeId,
         gameScopeRuleId: resolved.gameScopeRuleId,
-        definitionSnapshot: resolved.config as object,
+        definitionSnapshot: encodeDefinitionSnapshot(config, { playerMode }) as object,
         status: 'IN_PROGRESS',
         seed,
         targetValue,
@@ -107,11 +119,11 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
         startedAt: new Date(),
         expiresAt,
         participants: {
-          create: {
-            externalParticipantId: input.externalParticipantId,
-            turnOrder: 0,
+          create: participantExternalIds.map((externalParticipantId, index) => ({
+            externalParticipantId,
+            turnOrder: index,
             status: 'ACTIVE',
-          },
+          })),
         },
         events: {
           create: {
@@ -123,6 +135,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
               familyCode: resolved.familyCode,
               gameCode: resolved.gameCode,
               scopeCode: resolved.scopeCode,
+              playerMode,
             },
           },
         },
@@ -150,9 +163,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
   ): Promise<GameSessionView | null> {
     const session = await this.getSession(sessionId);
     if (!session) return null;
-    const belongs = session.participants.some(
-      (p) => p.externalParticipantId === externalParticipantId,
-    );
+    const belongs = canAccessSession(session.participants, externalParticipantId);
     return belongs ? session : null;
   }
 
@@ -206,11 +217,41 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     }
 
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const runtime = parseSessionRuntime(session.definitionSnapshot);
+    const expectedParticipant = getExpectedTurnParticipant(
+      session.participants,
+      session.selections.length,
+      runtime.playerMode,
+      definition.selectionCount,
+    );
+
+    if (runtime.playerMode === PlayerMode.MULTIPLAYER) {
+      if (!expectedParticipant || expectedParticipant.id !== participant.id) {
+        throw new DomainException(
+          ErrorCode.NOT_YOUR_TURN,
+          'It is not this participant turn.',
+          {
+            currentTurnParticipantId: expectedParticipant?.id ?? null,
+          },
+        );
+      }
+    }
 
     if (participant.selectionCount >= definition.selectionCount) {
       throw new DomainException(
         ErrorCode.SELECTION_LIMIT_REACHED,
         'Selection limit reached for this participant.',
+      );
+    }
+
+    if (
+      runtime.playerMode === PlayerMode.MULTIPLAYER &&
+      (await this.isPlayerSelectedInSession(input.sessionId, input.payload.playerId))
+    ) {
+      throw new DomainException(
+        ErrorCode.PLAYER_ALREADY_SELECTED,
+        'Player has already been selected in this session.',
+        { playerId: input.payload.playerId },
       );
     }
 
@@ -242,7 +283,15 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     const newAggregate = participant.aggregateValue + metricValue;
     const newSelectionCount = selectionOrder;
     const newStateVersion = session.stateVersion + 1;
-    const completed = newSelectionCount >= definition.selectionCount;
+    const pendingSelectionCounts = new Map(
+      session.participants.map((entry) => [entry.id, entry.selectionCount]),
+    );
+    pendingSelectionCounts.set(participant.id, newSelectionCount);
+    const sessionComplete = isSessionFullyComplete(
+      session.participants,
+      definition.selectionCount,
+      pendingSelectionCounts,
+    );
     const now = new Date();
 
     const versionUpdate = await this.prisma.gameSession.updateMany({
@@ -253,7 +302,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       },
       data: {
         stateVersion: newStateVersion,
-        ...(completed ? { status: 'COMPLETED', completedAt: now } : {}),
+        ...(sessionComplete ? { status: 'COMPLETED', completedAt: now } : {}),
       },
     });
 
@@ -316,7 +365,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       data: {
         aggregateValue: newAggregate,
         selectionCount: newSelectionCount,
-        status: completed ? 'COMPLETED' : 'ACTIVE',
+        status: sessionComplete ? 'COMPLETED' : 'ACTIVE',
       },
     });
 
@@ -336,42 +385,65 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       },
     });
 
-    if (completed && session.targetValue != null) {
-      const allSelections = [
-        ...existingSelections,
-        {
-          playerId: input.payload.playerId,
-          selectionOrder,
-          slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
-          metricValue,
-          playerSnapshot: {
-            ...playerSnapshot,
+    if (sessionComplete && session.targetValue != null) {
+      for (const sessionParticipant of session.participants) {
+        const participantSelections = session.selections
+          .filter((selection) => selection.participantId === sessionParticipant.id)
+          .map((selection) => ({
+            playerId: selection.playerId,
+            selectionOrder: selection.selectionOrder,
+            slotCode:
+              ((selection.playerSnapshot as Record<string, unknown>).slotCode as string | undefined) ??
+              null,
+            metricValue: selection.metricValueSnapshot,
+            playerSnapshot: selection.playerSnapshot as Record<string, unknown>,
+          }));
+
+        const participantAggregate =
+          sessionParticipant.id === participant.id
+            ? newAggregate
+            : sessionParticipant.aggregateValue;
+
+        if (sessionParticipant.id === participant.id) {
+          participantSelections.push({
+            playerId: input.payload.playerId,
+            selectionOrder,
             slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
+            metricValue,
+            playerSnapshot: {
+              ...playerSnapshot,
+              slotCode: 'slotCode' in input.payload ? input.payload.slotCode : null,
+            },
+          });
+        }
+
+        const completion = await hooks.onComplete({
+          targetValue: session.targetValue,
+          aggregateValue: participantAggregate,
+          definition,
+          selections: participantSelections,
+          startedAt: session.startedAt,
+          completedAt: now,
+        });
+
+        await this.prisma.gameResult.create({
+          data: {
+            gameSessionId: input.sessionId,
+            participantId: sessionParticipant.id,
+            targetValue: completion.targetValue,
+            aggregateValue: completion.aggregateValue,
+            absoluteDifference: completion.absoluteDifference,
+            exactHit: completion.exactHit,
+            performanceRating: completion.performanceRating as
+              'PERFECT' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
+            resultPayload: completion.resultPayload as object,
           },
-        },
-      ];
+        });
+      }
 
-      const completion = await hooks.onComplete({
-        targetValue: session.targetValue,
-        aggregateValue: newAggregate,
-        definition,
-        selections: allSelections,
-        startedAt: session.startedAt,
-        completedAt: now,
-      });
-
-      await this.prisma.gameResult.create({
-        data: {
-          gameSessionId: input.sessionId,
-          participantId: participant.id,
-          targetValue: completion.targetValue,
-          aggregateValue: completion.aggregateValue,
-          absoluteDifference: completion.absoluteDifference,
-          exactHit: completion.exactHit,
-          performanceRating: completion.performanceRating as
-            'PERFECT' | 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
-          resultPayload: completion.resultPayload as object,
-        },
+      await this.prisma.gameParticipant.updateMany({
+        where: { gameSessionId: input.sessionId },
+        data: { status: 'COMPLETED' },
       });
 
       await this.prisma.gameEvent.create({
@@ -380,7 +452,10 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
           sequence: nextSequence + 1,
           eventType: GameEventType.GAME_COMPLETED,
           participantId: participant.id,
-          payload: completion.resultPayload as object,
+          payload: {
+            playerMode: runtime.playerMode,
+            participantCount: session.participants.length,
+          },
         },
       });
     }
@@ -388,8 +463,8 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     const state = await this.buildState(input.sessionId, input.participantId);
     return {
       state,
-      eventType: completed ? GameEventType.GAME_COMPLETED : GameEventType.PLAYER_SELECTED,
-      completed,
+      eventType: sessionComplete ? GameEventType.GAME_COMPLETED : GameEventType.PLAYER_SELECTED,
+      completed: sessionComplete,
       idempotentReplay: false,
     };
   }
@@ -428,14 +503,68 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     });
     if (!session) return null;
 
+    if (!canAccessSession(session.participants, externalParticipantId)) {
+      return null;
+    }
+
     const participant = session.participants.find(
       (p) => p.externalParticipantId === externalParticipantId,
     );
-    if (!participant) return null;
+    if (!participant) {
+      return null;
+    }
 
     const result = session.results.find((r) => r.participantId === participant.id);
     if (!result) return null;
 
+    return this.toResultView(session, participant, result);
+  }
+
+  async getResults(
+    sessionId: string,
+    externalParticipantId: string,
+  ): Promise<GameResultView[]> {
+    const session = await this.prisma.gameSession.findUnique({
+      where: { id: sessionId },
+      include: { participants: true, selections: true, results: true },
+    });
+    if (!session) return [];
+
+    if (!canAccessSession(session.participants, externalParticipantId)) {
+      return [];
+    }
+
+    return session.participants
+      .map((participant) => {
+        const result = session.results.find((entry) => entry.participantId === participant.id);
+        if (!result) return null;
+        return this.toResultView(session, participant, result);
+      })
+      .filter((result): result is GameResultView => result !== null)
+      .sort((left, right) => {
+        const leftParticipant = session.participants.find((p) => p.id === left.participantId);
+        const rightParticipant = session.participants.find((p) => p.id === right.participantId);
+        return (leftParticipant?.turnOrder ?? 0) - (rightParticipant?.turnOrder ?? 0);
+      });
+  }
+
+  private toResultView(
+    session: {
+      id: string;
+      status: string;
+      participants: Array<{ id: string; selectionCount: number }>;
+    },
+    participant: { id: string; selectionCount: number },
+    result: {
+      id: string;
+      targetValue: number;
+      aggregateValue: number;
+      absoluteDifference: number;
+      exactHit: boolean;
+      performanceRating: string;
+      resultPayload: unknown;
+    },
+  ): GameResultView {
     const payload = result.resultPayload as {
       selections?: Array<{
         playerId: string;
@@ -493,6 +622,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       include: { participants: true, selections: true },
     });
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const runtime = parseSessionRuntime(session.definitionSnapshot);
     const participant = session.participants.find((p) => p.id === participantId);
     const revealImmediate = definition.revealPolicy === RevealPolicy.IMMEDIATE;
 
@@ -503,6 +633,13 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       targetValue: session.status === 'COMPLETED' ? session.targetValue : session.targetValue,
       selectionCount: participant?.selectionCount ?? 0,
       aggregateValue: participant?.aggregateValue ?? 0,
+      playerMode: runtime.playerMode,
+      currentTurnParticipantId: getCurrentTurnParticipantId(
+        session.participants,
+        session.selections.length,
+        runtime.playerMode,
+        definition.selectionCount,
+      ),
       selections: session.selections
         .filter((s) => s.participantId === participantId)
         .map((s) => ({
@@ -547,6 +684,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     }>;
   }): GameSessionView {
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
+    const runtime = parseSessionRuntime(session.definitionSnapshot);
     const revealImmediate = definition.revealPolicy === RevealPolicy.IMMEDIATE;
 
     return {
@@ -556,6 +694,13 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       targetValue: session.targetValue,
       seed: session.seed,
       definitionSnapshot: definition,
+      playerMode: runtime.playerMode,
+      currentTurnParticipantId: getCurrentTurnParticipantId(
+        session.participants,
+        session.selections.length,
+        runtime.playerMode,
+        definition.selectionCount,
+      ),
       startedAt: session.startedAt?.toISOString() ?? null,
       completedAt: session.completedAt?.toISOString() ?? null,
       expiresAt: session.expiresAt?.toISOString() ?? null,

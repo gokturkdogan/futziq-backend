@@ -19,6 +19,8 @@ export interface GameSessionState {
   targetValue: number | null;
   selectionCount: number;
   aggregateValue: number;
+  playerMode: string;
+  currentTurnParticipantId: string | null;
   selections: Array<{
     playerId: string;
     selectionOrder: number;

@@ -5,6 +5,7 @@ import { DomainException, ErrorCode } from '../../common/errors/domain.exception
 import { GameFamilyRegistry } from '../../game-engine/registries/game-family.registry';
 import { ScopeRegistry } from '../../game-engine/registries/scope.registry';
 import { parseGameDefinitionConfig } from '../../game-engine/core/config-parser';
+import { PlayerMode } from '../domain/session-runtime';
 
 @Injectable()
 export class GameRuntimeService {
@@ -22,12 +23,14 @@ export class GameRuntimeService {
       gameCode: string;
       scopeCode?: string;
       targetValue?: number;
+      playerMode?: PlayerMode;
     },
     externalParticipantId: string,
   ) {
     const expiryHours = this.configService.get<number>('SESSION_EXPIRY_HOURS', 24);
     return this.sessionRepository.createSession({
       ...input,
+      playerMode: input.playerMode ?? PlayerMode.SINGLE,
       externalParticipantId,
       sessionExpiryHours: expiryHours,
     });
@@ -54,16 +57,24 @@ export class GameRuntimeService {
   ) {
     const session = await this.getSession(sessionId, externalParticipantId);
     const definition = parseGameDefinitionConfig(session.definitionSnapshot);
-    const participant = session.participants.find(
+    let participant = session.participants.find(
       (p) => p.externalParticipantId === externalParticipantId,
     );
+    if (!participant && session.playerMode === PlayerMode.MULTIPLAYER) {
+      participant =
+        session.participants.find((p) => p.id === session.currentTurnParticipantId) ??
+        session.participants[0];
+    }
     if (!participant) {
       throw new DomainException(ErrorCode.INVALID_GAME_ACTION, 'Participant not found.');
     }
 
-    const excludePlayerIds = session.selections
-      .filter((s) => s.participantId === participant.id)
-      .map((s) => s.playerId);
+    const excludePlayerIds =
+      session.playerMode === PlayerMode.MULTIPLAYER
+        ? session.selections.map((selection) => selection.playerId)
+        : session.selections
+            .filter((selection) => selection.participantId === participant.id)
+            .map((selection) => selection.playerId);
 
     const scopeResolver = this.scopeRegistry.get(definition.scope);
     return scopeResolver.searchEligiblePlayers(
@@ -118,5 +129,14 @@ export class GameRuntimeService {
       throw new DomainException(ErrorCode.RESULT_NOT_AVAILABLE, 'Result is not available yet.');
     }
     return result;
+  }
+
+  async getResults(sessionId: string, externalParticipantId: string) {
+    await this.getSession(sessionId, externalParticipantId);
+    const results = await this.sessionRepository.getResults(sessionId, externalParticipantId);
+    if (results.length === 0) {
+      throw new DomainException(ErrorCode.RESULT_NOT_AVAILABLE, 'Result is not available yet.');
+    }
+    return results;
   }
 }

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PlayerMode } from '../../domain/session-runtime';
 
 export class CreateGameSessionDto {
   @ApiProperty({ example: 'TARGET_HUNT' })
@@ -15,6 +16,15 @@ export class CreateGameSessionDto {
   @IsOptional()
   @IsString()
   scopeCode?: string;
+
+  @ApiPropertyOptional({
+    enum: PlayerMode,
+    example: PlayerMode.SINGLE,
+    description: 'SINGLE for solo play, MULTIPLAYER for same-screen pass-and-play with 2 players.',
+  })
+  @IsOptional()
+  @IsEnum(PlayerMode)
+  playerMode?: PlayerMode;
 
   @ApiPropertyOptional({
     example: 500,

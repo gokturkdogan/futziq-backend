@@ -36,6 +36,7 @@ export class GameSessionsController {
         gameCode: dto.gameCode,
         scopeCode: dto.scopeCode,
         targetValue: dto.targetValue,
+        playerMode: dto.playerMode,
       },
       participantId,
     );
@@ -86,5 +87,12 @@ export class GameSessionsController {
   @ApiResponse({ status: 404, description: 'RESULT_NOT_AVAILABLE' })
   getResult(@Param('sessionId') sessionId: string, @Req() req: Request) {
     return this.runtimeService.getResult(sessionId, this.resolveParticipant(req));
+  }
+
+  @Get(':sessionId/results')
+  @ApiOperation({ summary: 'Get all participant results for a session' })
+  @ApiResponse({ status: 404, description: 'RESULT_NOT_AVAILABLE' })
+  getResults(@Param('sessionId') sessionId: string, @Req() req: Request) {
+    return this.runtimeService.getResults(sessionId, this.resolveParticipant(req));
   }
 }

@@ -3,12 +3,14 @@ import {
   ProcessActionInput,
   ProcessActionResult,
 } from '../../game-engine/contracts/game-family-handler';
+import { PlayerMode } from './session-runtime';
 
 export interface CreateSessionInput {
   familyCode: string;
   gameCode: string;
   scopeCode?: string;
   targetValue?: number;
+  playerMode?: PlayerMode;
   externalParticipantId: string;
   sessionExpiryHours: number;
 }
@@ -20,6 +22,8 @@ export interface GameSessionView {
   targetValue: number | null;
   seed: string;
   definitionSnapshot: GameDefinitionConfig;
+  playerMode: PlayerMode;
+  currentTurnParticipantId: string | null;
   startedAt: string | null;
   completedAt: string | null;
   expiresAt: string | null;
@@ -126,6 +130,7 @@ export interface GameSessionRepository {
     }>
   >;
   getResult(sessionId: string, externalParticipantId: string): Promise<GameResultView | null>;
+  getResults(sessionId: string, externalParticipantId: string): Promise<GameResultView[]>;
   getPlayerSnapshot(playerId: string): Promise<Record<string, unknown> | null>;
   isPlayerSelectedInSession(sessionId: string, playerId: string): Promise<boolean>;
 }

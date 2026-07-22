@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/football-data/infrastructure/prisma.service';
 import { GameRuntimeService } from '../src/game-runtime/application/game-runtime.service';
+import { PlayerMode } from '../src/game-runtime/domain/session-runtime';
 import { v4 as uuidv4 } from 'uuid';
 
 describe('Game Runtime Integration', () => {
@@ -132,4 +133,60 @@ describe('Game Runtime Integration', () => {
     expect(action.state.selectionCount).toBe(1);
     expect(action.state.selections[0].slotCode).toBe('GK');
   });
+
+  it(
+    'supports same-screen multiplayer with alternating turns',
+    async () => {
+    const hostId = `multi-${uuidv4()}`;
+    const session = await runtime.createSession(
+      {
+        familyCode: 'TARGET_HUNT',
+        gameCode: 'GOALS',
+        scopeCode: 'CAREER',
+        playerMode: PlayerMode.MULTIPLAYER,
+      },
+      hostId,
+    );
+
+    expect(session.playerMode).toBe('MULTIPLAYER');
+    expect(session.participants).toHaveLength(2);
+    expect(session.currentTurnParticipantId).toBe(session.participants[0].id);
+
+    const [playerOne, playerTwo] = session.participants;
+    const picks: string[] = [];
+    const queries = ['ron', 'messi', 'ney', 'mbap', 'haal', 'kane', 'sala', 'debr', 'modr', 'kroo'];
+
+    for (let turn = 0; turn < 10; turn += 1) {
+      const actingParticipant = turn % 2 === 0 ? playerOne : playerTwo;
+      const search = await runtime.searchPlayers(
+        session.id,
+        actingParticipant.externalParticipantId,
+        queries[turn] ?? 'son',
+        1,
+        10,
+      );
+      const player = search.items.find((item) => !picks.includes(item.id)) ?? search.items[0];
+      expect(player).toBeDefined();
+      picks.push(player!.id);
+
+      const action = await runtime.processAction(session.id, actingParticipant.externalParticipantId, {
+        actionId: uuidv4(),
+        expectedVersion: turn,
+        playerId: player!.id,
+      });
+
+      if (turn < 9) {
+        expect(action.completed).toBe(false);
+      } else {
+        expect(action.completed).toBe(true);
+      }
+    }
+
+    const results = await runtime.getResults(session.id, hostId);
+    expect(results).toHaveLength(2);
+    expect(results[0].selectionCount).toBe(5);
+    expect(results[1].selectionCount).toBe(5);
+    },
+    60000,
+  );
 });
