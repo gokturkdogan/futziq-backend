@@ -10,6 +10,7 @@ import {
   TargetGeneratorStrategy,
 } from '../src/game-engine/contracts/game-types';
 import type { SupportedLocale } from '../src/common/locale/locale.constants';
+import { RANDOM_SCOPE_CODE } from '../src/game-catalog/domain/catalog.constants';
 
 type LocalizedText = Record<SupportedLocale, { title: string; description: string }>;
 
@@ -46,7 +47,7 @@ export const GAME_FAMILIES = [
   },
 ] as const;
 
-export const GAME_SCOPES = [
+export const PLAYABLE_GAME_SCOPES = [
   {
     code: 'CAREER',
     sortOrder: 1,
@@ -88,6 +89,24 @@ export const GAME_SCOPES = [
     },
   },
 ] as const;
+
+export const RANDOM_GAME_SCOPE = {
+  code: RANDOM_SCOPE_CODE,
+  sortOrder: 6,
+  imageUrl: null,
+  translations: {
+    tr: {
+      title: 'Rastgele',
+      description: 'Oyun başladığında rastgele bir kapsam seçilir.',
+    },
+    en: {
+      title: 'Random',
+      description: 'A random scope is chosen when the game starts.',
+    },
+  },
+} as const;
+
+export const GAME_SCOPES = [...PLAYABLE_GAME_SCOPES, RANDOM_GAME_SCOPE] as const;
 
 export const TARGET_HUNT_GAMES = [
   {
@@ -153,9 +172,10 @@ export const TARGET_HUNT_GAMES = [
 ] as const;
 
 export type TargetHuntGameCode = (typeof TARGET_HUNT_GAMES)[number]['code'];
+export type PlayableGameScopeCode = (typeof PLAYABLE_GAME_SCOPES)[number]['code'];
 export type GameScopeCode = (typeof GAME_SCOPES)[number]['code'];
 
-const ENGINE_METRIC: Record<TargetHuntGameCode, Record<GameScopeCode, MetricCode>> = {
+const ENGINE_METRIC: Record<TargetHuntGameCode, Record<PlayableGameScopeCode, MetricCode>> = {
   GOALS: {
     CAREER: MetricCode.CAREER_GOALS,
     CLUB: MetricCode.CLUB_GOALS,
@@ -209,7 +229,7 @@ const BASE_TARGET_RANGES: Record<TargetHuntGameCode, { minimum: number; maximum:
   RED_CARDS: { minimum: 5, maximum: 60 },
 };
 
-const SCOPE_SCALE: Record<GameScopeCode, number> = {
+const SCOPE_SCALE: Record<PlayableGameScopeCode, number> = {
   CAREER: 1,
   CLUB: 0.8,
   NATIONAL_TEAM: 0.2,
@@ -219,7 +239,7 @@ const SCOPE_SCALE: Record<GameScopeCode, number> = {
 
 function buildTargetHuntConfig(
   gameCode: TargetHuntGameCode,
-  scopeCode: GameScopeCode,
+  scopeCode: PlayableGameScopeCode,
 ): GameDefinitionConfig {
   const base = BASE_TARGET_RANGES[gameCode];
   const scale = SCOPE_SCALE[scopeCode];
@@ -241,7 +261,7 @@ function buildTargetHuntConfig(
 
 export function buildTargetHuntScopeRuleConfig(
   gameCode: TargetHuntGameCode,
-  scopeCode: GameScopeCode,
+  scopeCode: PlayableGameScopeCode,
 ): GameDefinitionConfig {
   return buildTargetHuntConfig(gameCode, scopeCode);
 }

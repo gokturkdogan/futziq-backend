@@ -13,11 +13,12 @@ import {
   GAME_SCOPES,
   TARGET_HUNT_GAMES,
   TargetHuntGameCode,
-  GameScopeCode,
+  PlayableGameScopeCode,
   buildDraftGameConfig,
   buildTargetHuntScopeRuleConfig,
   getDefaultLocaleText,
 } from './catalog-seed';
+import { isRandomScopeCode } from '../src/game-catalog/domain/catalog.constants';
 
 const prisma = new PrismaClient();
 
@@ -95,6 +96,9 @@ async function upsertFamilies(media: CatalogMediaFile) {
 
 async function upsertScopes(media: CatalogMediaFile) {
   for (const scope of GAME_SCOPES) {
+    if (isRandomScopeCode(scope.code)) {
+      continue;
+    }
     const defaultText = getDefaultLocaleText(scope.translations);
     const existing = await prisma.gameScope.findUnique({
       where: { code: scope.code },
@@ -191,11 +195,15 @@ async function seedTargetHuntGames(media: CatalogMediaFile) {
     await upsertTranslations('game', gameRecord.id, game.translations);
 
     for (const scope of GAME_SCOPES) {
+      if (isRandomScopeCode(scope.code)) {
+        continue;
+      }
+
       const scopeRecord = scopeByCode.get(scope.code);
       if (!scopeRecord) continue;
 
       const gameCode = game.code as TargetHuntGameCode;
-      const scopeCode = scope.code as GameScopeCode;
+      const ruleConfig = buildTargetHuntScopeRuleConfig(gameCode, scope.code as PlayableGameScopeCode);
 
       await prisma.gameScopeRule.upsert({
         where: {
@@ -207,14 +215,14 @@ async function seedTargetHuntGames(media: CatalogMediaFile) {
         update: {
           sortOrder: scope.sortOrder,
           status: 'ACTIVE',
-          config: buildTargetHuntScopeRuleConfig(gameCode, scopeCode) as object,
+          config: ruleConfig as object,
         },
         create: {
           gameId: gameRecord.id,
           scopeId: scopeRecord.id,
           sortOrder: scope.sortOrder,
           status: 'ACTIVE',
-          config: buildTargetHuntScopeRuleConfig(gameCode, scopeCode) as object,
+          config: ruleConfig as object,
         },
       });
     }

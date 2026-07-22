@@ -39,6 +39,12 @@ import {
   PlayerMode,
 } from '../domain/session-runtime';
 
+const GAME_SESSION_VIEW_INCLUDE = {
+  participants: true,
+  selections: true,
+  scope: { select: { code: true } },
+} as const;
+
 @Injectable()
 export class PrismaGameSessionRepository implements GameSessionRepository {
   constructor(
@@ -140,10 +146,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
           },
         },
       },
-      include: {
-        participants: true,
-        selections: true,
-      },
+      include: GAME_SESSION_VIEW_INCLUDE,
     });
 
     return this.toView(session);
@@ -152,7 +155,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
   async getSession(sessionId: string): Promise<GameSessionView | null> {
     const session = await this.prisma.gameSession.findUnique({
       where: { id: sessionId },
-      include: { participants: true, selections: true },
+      include: GAME_SESSION_VIEW_INCLUDE,
     });
     return session ? this.toView(session) : null;
   }
@@ -664,6 +667,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
     startedAt: Date | null;
     completedAt: Date | null;
     expiresAt: Date | null;
+    scope?: { code: string } | null;
     participants: Array<{
       id: string;
       externalParticipantId: string;
@@ -693,6 +697,7 @@ export class PrismaGameSessionRepository implements GameSessionRepository {
       stateVersion: session.stateVersion,
       targetValue: session.targetValue,
       seed: session.seed,
+      scopeCode: session.scope?.code ?? null,
       definitionSnapshot: definition,
       playerMode: runtime.playerMode,
       currentTurnParticipantId: getCurrentTurnParticipantId(

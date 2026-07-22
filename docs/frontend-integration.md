@@ -199,7 +199,7 @@ Yeni oyun başlatır.
 |------|----------|
 | `familyCode` | Family kodu (`TARGET_HUNT`, `DRAFT`) |
 | `gameCode` | Game kodu (`GOALS`, `ASSISTS`, `TALLEST_XI` ...) |
-| `scopeCode` | Scope kodu. `requiresScope=true` ise zorunlu |
+| `scopeCode` | Scope kodu. `requiresScope=true` ise zorunlu. `RANDOM` gönderildiğinde backend oyun başında geçerli kapsamlardan birini seçer. İlk kurulum: `npm run db:seed-random-scope` (yalnızca RANDOM scope ekler, diğer katalog verisine dokunmaz) |
 | `targetValue` | Opsiyonel sabit hedef. Gönderilmezse backend random üretir (Target Hunt) |
 
 **Response 201:**

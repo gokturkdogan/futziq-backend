@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../football-data/infrastructure/prisma.service';
 import { pickTranslation } from '../../common/locale/pick-translation';
 import {
+  isRandomScopeCode,
+  pickRandomPlayableScopeRule,
+} from '../domain/catalog.constants';
+import {
   GameCatalogRepository,
   GameFamilyDetailView,
   GameFamilySummaryView,
@@ -176,6 +180,23 @@ export class PrismaGameCatalogRepository implements GameCatalogRepository {
 
     if (!input.scopeCode) {
       return null;
+    }
+
+    if (isRandomScopeCode(input.scopeCode)) {
+      const rule = pickRandomPlayableScopeRule(game.scopeRules);
+      if (!rule) {
+        return null;
+      }
+
+      return {
+        familyCode: game.family.code,
+        gameId: game.id,
+        gameCode: game.code,
+        scopeId: rule.scope.id,
+        scopeCode: rule.scope.code,
+        gameScopeRuleId: rule.id,
+        config: rule.config,
+      };
     }
 
     const rule = game.scopeRules.find((item) => item.scope.code === input.scopeCode);

@@ -26,6 +26,24 @@ describe('Game Runtime Integration', () => {
     await prisma.$disconnect();
   });
 
+  it('creates session with random scope resolution', async () => {
+    const session = await runtime.createSession(
+      {
+        familyCode: 'TARGET_HUNT',
+        gameCode: 'GOALS',
+        scopeCode: 'RANDOM',
+      },
+      `random-scope-${uuidv4()}`,
+    );
+
+    expect(session.scopeCode).toBeDefined();
+    expect(session.scopeCode).not.toBe('RANDOM');
+    expect(['CAREER', 'CLUB', 'NATIONAL_TEAM', 'WORLD_CUP', 'CHAMPIONS_LEAGUE']).toContain(
+      session.scopeCode,
+    );
+    expect(session.definitionSnapshot.metric).toMatch(/_GOALS$/);
+  });
+
   it('creates session with immutable snapshot and events', async () => {
     const session = await runtime.createSession(
       {

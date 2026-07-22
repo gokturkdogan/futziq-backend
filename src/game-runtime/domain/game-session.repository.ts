@@ -21,6 +21,7 @@ export interface GameSessionView {
   stateVersion: number;
   targetValue: number | null;
   seed: string;
+  scopeCode: string | null;
   definitionSnapshot: GameDefinitionConfig;
   playerMode: PlayerMode;
   currentTurnParticipantId: string | null;
